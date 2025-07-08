@@ -5,6 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 var JSON = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -44,4 +45,19 @@ func Pagination(r *http.Request) (int, int) {
 	offset := (page - 1) * limit
 
 	return limit, offset
+}
+
+func IsValidEmail(email string) bool {
+	parts := strings.Split(email, "@")
+	if parts[1] == "remotestate.com" {
+		return true
+	}
+	return false
+}
+
+func SplitName(email string) (string, string) {
+	parts := strings.Split(strings.Split(email, "@")[0], ".")
+	firstName := parts[0]
+	lastName := parts[1]
+	return firstName, lastName
 }
