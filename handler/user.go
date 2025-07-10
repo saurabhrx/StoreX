@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"net/http"
-	"os"
 	"storeX/database"
 	"storeX/database/dbhelper"
 	"storeX/middleware"
@@ -14,16 +13,13 @@ import (
 	"storeX/utils"
 )
 
-var json = utils.JSON
-var secretKey = []byte(os.Getenv("SECRET_KEY"))
-
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var body models.LoginUserRequest
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
+
 	if body.Email == "" {
 		utils.ResponseError(w, http.StatusBadRequest, "enter the email")
 		return
@@ -36,15 +32,14 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	firstName, lastName := utils.SplitName(body.Email)
 	body.FirstName = firstName
 	body.LastName = lastName
-	var userID string
-	fmt.Println(body)
-	userID, err = dbhelper.IsUserExists(body.Email)
+	userID, err := dbhelper.IsUserExists(body.Email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check user exists")
 		return
 	}
 	var empRole string
+	var empType string
 	if userID == "" {
 		txErr := database.Tx(func(tx *sqlx.Tx) error {
 			userID, err = dbhelper.Register(tx, &body)
@@ -52,11 +47,12 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 			empRole = models.RoleEmployee
-			err = dbhelper.CreateEmployeeRole(tx, userID)
+			err = dbhelper.CreateUserRole(tx, userID, empRole)
 			if err != nil {
 				return err
 			}
-			err = dbhelper.CreateEmployeeType(tx, userID)
+			empType = models.TypeFullTime
+			err = dbhelper.CreateUserType(tx, userID, empType)
 			if err != nil {
 				return err
 			}
@@ -67,7 +63,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		empRole, err = dbhelper.GetEmployeeRole(userID)
+		empRole, err = dbhelper.GetUserRole(userID)
 		if err != nil {
 			utils.ResponseError(w, http.StatusInternalServerError, "failed to get user role")
 			return
@@ -80,45 +76,87 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	EncodeErr := json.NewEncoder(w).Encode(map[string]string{
-		"message":       "user logged in successfully",
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status       int    `json:"status"`
+		Message      string `json:"message"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}{
+		Status:       http.StatusOK,
+		Message:      "user logged in successfully",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	})
-	if EncodeErr != nil {
-		utils.ResponseError(w, http.StatusInternalServerError, "failed to send response")
-	}
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var body models.CreateUserRequest
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-	if body.Email == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the email")
+	fmt.Println(body)
+	if body.Email == "" || !utils.IsValidEmail(body.Email) {
+		utils.ResponseError(w, http.StatusBadRequest, "enter valid email")
 		return
 	}
 	if body.FirstName == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the first name")
+		utils.ResponseError(w, http.StatusBadRequest, "enter valid first name")
 		return
 	}
-	if body.Phone == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the phone number")
+	if body.Phone == "" || len(body.Phone) != 10 {
+		utils.ResponseError(w, http.StatusBadRequest, "enter valid number")
 		return
 	}
-	if body.EmployeeRole == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the user role")
+	if body.EmployeeRole == "" || !models.IsValidRole(body.EmployeeRole) {
+		utils.ResponseError(w, http.StatusBadRequest, "enter valid user role")
 		return
 	}
-	if body.EmployeeType == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the user type")
+	if body.EmployeeType == "" || !models.IsValidType(body.EmployeeType) {
+		utils.ResponseError(w, http.StatusBadRequest, "enter valid user type")
 		return
 	}
 
-	userID := middleware.UserContext(r)
-	body.CreatedBy = userID
+	creatorID := middleware.UserContext(r)
+	body.CreatedBy = creatorID
+	userID, err := dbhelper.IsUserExists(body.Email)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check user exists")
+		return
+	}
+	if userID != "" {
+		utils.ResponseError(w, http.StatusConflict, "user already exists")
+		return
+	}
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		userID, err = dbhelper.CreateUser(tx, &body)
+		if err != nil {
+			return err
+		}
+		err = dbhelper.CreateUserRole(tx, userID, body.EmployeeRole)
+		if err != nil {
+			return err
+		}
+		err = dbhelper.CreateUserType(tx, userID, body.EmployeeType)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if txErr != nil {
+		fmt.Println(txErr)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to create user")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusCreated, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusCreated,
+		Message: "user created successfully",
+	})
 
 }

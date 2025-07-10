@@ -25,15 +25,15 @@ func IsUserExists(email string) (string, error) {
 	}
 	return userID, nil
 }
-func CreateEmployeeRole(db sqlx.Ext, userID string) error {
-	query := `INSERT INTO employee_role(employee_id) VALUES ($1)`
-	_, err := db.Exec(query, userID)
+func CreateUserRole(db sqlx.Ext, userID, empRole string) error {
+	query := `INSERT INTO employee_role(employee_id,role) VALUES ($1,$2)`
+	_, err := db.Exec(query, userID, empRole)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func GetEmployeeRole(userID string) (string, error) {
+func GetUserRole(userID string) (string, error) {
 	query := `SELECT role FROM employee_role WHERE employee_id=$1`
 	var role string
 	err := database.STOREX.Get(&role, query, userID)
@@ -42,11 +42,20 @@ func GetEmployeeRole(userID string) (string, error) {
 	}
 	return role, nil
 }
-func CreateEmployeeType(db sqlx.Ext, userID string) error {
-	query := `INSERT INTO employee_type(employee_id) VALUES ($1)`
-	_, err := db.Exec(query, userID)
+func CreateUserType(db sqlx.Ext, userID, empType string) error {
+	query := `INSERT INTO employee_type(employee_id,type) VALUES ($1,$2)`
+	_, err := db.Exec(query, userID, empType)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+func CreateUser(db sqlx.Ext, body *models.CreateUserRequest) (string, error) {
+	query := `INSERT INTO employees(first_name, last_name, email, phone_no,created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id`
+	var userID string
+	err := db.QueryRowx(query, body.FirstName, body.LastName, body.Email, body.Phone, body.CreatedBy).Scan(&userID)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
 }

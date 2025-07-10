@@ -4,6 +4,8 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"storeX/handler"
+	"storeX/middleware"
+	"storeX/models"
 	"storeX/utils"
 )
 
@@ -14,7 +16,17 @@ func SetupTodoRoutes() *mux.Router {
 		utils.ResponseError(w, http.StatusOK, "server is running")
 	})
 
-	api := srv.PathPrefix("/api/v1").Subrouter()
-	api.HandleFunc("/user/login", handler.LoginUser).Methods("POST")
+	public := srv.PathPrefix("/api/v1").Subrouter()
+	public.HandleFunc("/user/login", handler.LoginUser).Methods("POST")
+
+	protected := public.NewRoute().Subrouter()
+	protected.Use(middleware.AuthMiddleware)
+
+	private := protected.NewRoute().Subrouter()
+	private.Use(middleware.AuthRole(models.RoleAdmin))
+	private.HandleFunc("/user", handler.CreateUser).Methods("POST")
+	private.HandleFunc("/asset", handler.CreateAsset).Methods("POST")
+	private.HandleFunc("/asset/assign", handler.AssignAsset).Methods("POST")
+
 	return srv
 }

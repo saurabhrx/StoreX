@@ -94,23 +94,19 @@ func UserContext(r *http.Request) string {
 
 }
 
-func RoleContext(r *http.Request) []string {
-	if roles, ok := r.Context().Value(roleContext).([]string); ok {
+func RoleContext(r *http.Request) string {
+	if roles, ok := r.Context().Value(roleContext).(string); ok {
 		return roles
 	}
-	return []string{}
+	return ""
 }
 
-func AuthRole(allowedRoles ...string) func(http.Handler) http.Handler {
-	roleSet := make(map[string]struct{})
-	for _, role := range allowedRoles {
-		roleSet[strings.ToLower(role)] = struct{}{}
-	}
+func AuthRole(allowedRole ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userRoles := RoleContext(r)
-			for _, role := range userRoles {
-				if _, ok := roleSet[strings.ToLower(role)]; ok {
+			userRole := RoleContext(r)
+			for _, role := range allowedRole {
+				if userRole == role {
 					next.ServeHTTP(w, r)
 					return
 				}

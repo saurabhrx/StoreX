@@ -3,6 +3,7 @@ package utils
 import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,6 +27,19 @@ func ResponseError(w http.ResponseWriter, statusCode int, message string) {
 	if err := json.NewEncoder(w).Encode(clientErr); err != nil {
 		logrus.Errorf("failed to send the error %+v", err)
 	}
+}
+func ResponseJSON(w http.ResponseWriter, statusCode int, body interface{}) {
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(body); err != nil {
+		logrus.Errorf("failed to send the error %+v", err)
+	}
+}
+func ParseBody(body io.Reader, out interface{}) error {
+	err := json.NewDecoder(body).Decode(out)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Pagination(r *http.Request) (int, int) {
