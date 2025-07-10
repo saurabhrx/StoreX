@@ -86,8 +86,8 @@ CREATE TABLE IF NOT EXISTS assigned_asset(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID REFERENCES assets(id) NOT NULL ,
     employee_id UUID REFERENCES employees(id) NOT NULL ,
-    start_date DATE NOT NULL ,
-    end_date DATE NULL,
+    start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    end_date TIMESTAMP WITH TIME ZONE,
     reason_to_return TEXT
 );
 
@@ -107,16 +107,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS active_vendor_idx ON vendors(name,phone_no) WH
 CREATE TABLE IF NOT EXISTS warranty(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID REFERENCES assets(id) NOT NULL ,
-    start_date DATE,
-    end_date DATE
+    start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    end_date TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS services(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID REFERENCES assets(id) NOT NULL ,
     vendor_id UUID REFERENCES vendors(id) NOT NULL,
-    start_date DATE NOT NULL ,
-    end_date DATE NOT NULL ,
+    start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    end_date TIMESTAMP WITH TIME ZONE,
     cost NUMERIC(10,2) NOT NULL ,
     remark TEXT
 );
