@@ -160,3 +160,22 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+func GetEmployees(w http.ResponseWriter, r *http.Request) {
+	queryParam := r.URL.Query()
+	search := queryParam.Get("search")
+	empRole := queryParam.Get("role")
+	empType := queryParam.Get("type")
+	empRoleArray := utils.RoleArray(empRole)
+	empTypeArray := utils.TypeArray(empType)
+
+	fmt.Println(search)
+	fmt.Println(empRoleArray)
+	fmt.Println("type...", empTypeArray)
+
+	body, err := dbhelper.GetUsers(search, empRoleArray, empTypeArray)
+	if err != nil {
+		fmt.Println(err)
+	}
+	utils.ResponseJSON(w, http.StatusOK, body)
+}

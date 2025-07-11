@@ -75,3 +75,12 @@ func SplitName(email string) (string, string) {
 	lastName := parts[1]
 	return firstName, lastName
 }
+
+func RoleArray(empRole string) []string {
+	result := strings.Split(empRole, ",")
+	return result
+}
+func TypeArray(empType string) []string {
+	result := strings.Split(empType, ",")
+	return result
+}

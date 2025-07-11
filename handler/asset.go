@@ -2,9 +2,12 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"net/http"
+	"storeX/database"
 	"storeX/database/dbhelper"
 	"storeX/middleware"
 	"storeX/models"
@@ -13,33 +16,75 @@ import (
 
 func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	var body models.CreateAssetRequest
+	var laptopSpecs models.LaptopSpecs
+	var mobileSpecs models.MobileSpecs
+	var mouseSpecs models.MouseSpecs
+	var monitorSpecs models.MonitorSpecs
+	var hardDriveSpecs models.HardDiskSpecs
+	var penDriveSpecs models.PenDriveSpecs
+	var simSpecs models.SimSpecs
+	var accessoriesSpecs models.AccessoriesSpecs
+
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-	if body.Brand == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid brand")
-		return
+	
+	if body.Type == "laptop" {
+		err := json.Unmarshal(body.Specifications, &laptopSpecs)
+		fmt.Println(laptopSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	if body.Model == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid model")
-		return
+	if body.Type == "mobile" {
+		err := json.Unmarshal(body.Specifications, &mobileSpecs)
+		fmt.Println(mobileSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	if body.Serial == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid serial")
-		return
+	if body.Type == "mouse" {
+		err := json.Unmarshal(body.Specifications, &mouseSpecs)
+		fmt.Println(mouseSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	if body.AssetType == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid asset type")
-		return
+	if body.Type == "monitor" {
+		err := json.Unmarshal(body.Specifications, &monitorSpecs)
+		fmt.Println(monitorSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	if body.PurchasedAt == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid date")
-		return
+	if body.Type == "hard_drive" {
+		err := json.Unmarshal(body.Specifications, &hardDriveSpecs)
+		fmt.Println(hardDriveSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	if body.Price < 0 {
-		utils.ResponseError(w, http.StatusBadRequest, "price must be greater than or equal to 0")
-		return
+	if body.Type == "pen_drive" {
+		err := json.Unmarshal(body.Specifications, &penDriveSpecs)
+		fmt.Println(penDriveSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	if body.Type == "sim" {
+		err := json.Unmarshal(body.Specifications, &simSpecs)
+		fmt.Println(simSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	if body.Type == "accessories" {
+		err := json.Unmarshal(body.Specifications, &accessoriesSpecs)
+		fmt.Println(accessoriesSpecs)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	assetID, err := dbhelper.IsAssetExists(body.Serial)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -53,7 +98,60 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	CreatorId := middleware.UserContext(r)
 	body.CreatedBy = CreatorId
-	if err := dbhelper.CreateAsset(&body); err != nil {
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		assetID, err = dbhelper.CreateAsset(tx, &body)
+		if err != nil {
+			return err
+		}
+		fmt.Println(assetID)
+		switch body.Type {
+		case "laptop":
+			laptopSpecs.AssetID = assetID
+			if err := dbhelper.CreateLaptopSpecs(tx, &laptopSpecs); err != nil {
+				return err
+			}
+		case "mobile":
+			mobileSpecs.AssetID = assetID
+			if err := dbhelper.CreateMobileSpecs(tx, &mobileSpecs); err != nil {
+				return err
+			}
+		case "mouse":
+			mouseSpecs.AssetID = assetID
+			if err := dbhelper.CreateMouseSpecs(tx, &mouseSpecs); err != nil {
+				return err
+			}
+		case "monitor":
+			monitorSpecs.AssetID = assetID
+			if err := dbhelper.CreateMonitorSpecs(tx, &monitorSpecs); err != nil {
+				return err
+			}
+		case "hard_disk":
+			hardDriveSpecs.AssetID = assetID
+			if err := dbhelper.CreateHardDiskSpecs(tx, &hardDriveSpecs); err != nil {
+				return err
+			}
+		case "pen_drive":
+			penDriveSpecs.AssetID = assetID
+			if err := dbhelper.CreatePenDriveSpecs(tx, &penDriveSpecs); err != nil {
+				return err
+			}
+		case "sim":
+			simSpecs.AssetID = assetID
+			if err := dbhelper.CreateSimSpecs(tx, &simSpecs); err != nil {
+				return err
+			}
+		case "accessories":
+			accessoriesSpecs.AssetID = assetID
+			if err := dbhelper.CreateAccessoriesSpecs(tx, &accessoriesSpecs); err != nil {
+				return err
+			}
+
+		}
+
+		return nil
+	})
+	if txErr != nil {
+		fmt.Println(txErr)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create asset")
 		return
 	}
