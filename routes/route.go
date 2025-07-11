@@ -27,6 +27,7 @@ func SetupTodoRoutes() *mux.Router {
 	private.HandleFunc("/user", handler.CreateUser).Methods("POST")
 	private.HandleFunc("/asset", handler.CreateAsset).Methods("POST")
 	private.HandleFunc("/asset/assign", handler.AssignAsset).Methods("POST")
+	public.HandleFunc("/employees", handler.GetEmployees).Methods("GET")
 
 	return srv
 }

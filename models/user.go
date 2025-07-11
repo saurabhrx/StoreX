@@ -1,5 +1,7 @@
 package models
 
+import "github.com/guregu/null"
+
 const (
 	RoleAdmin           = "admin"
 	RoleEmployee        = "employee"
@@ -34,4 +36,13 @@ type CreateUserRequest struct {
 	EmployeeRole string `json:"employeeRole"`
 	EmployeeType string `json:"employeeType"`
 	CreatedBy    string `json:"createdBy"`
+}
+
+type UserResponse struct {
+	Name   string      `json:"name" db:"name"`
+	Email  null.String `json:"email" db:"email"`
+	Phone  null.String `json:"phone_no" db:"phone_no"`
+	Assets []string    `json:"assets" db:"assets"`
+	Role   string      `json:"role" db:"role"`
+	Type   string      `json:"type" db:"type"`
 }
