@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"net/http"
 	"storeX/database"
@@ -12,80 +13,78 @@ import (
 	"storeX/middleware"
 	"storeX/models"
 	"storeX/utils"
+	"strings"
 )
 
 func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	var body models.CreateAssetRequest
-	var laptopSpecs models.LaptopSpecs
-	var mobileSpecs models.MobileSpecs
-	var mouseSpecs models.MouseSpecs
-	var monitorSpecs models.MonitorSpecs
-	var hardDriveSpecs models.HardDiskSpecs
-	var penDriveSpecs models.PenDriveSpecs
-	var simSpecs models.SimSpecs
-	var accessoriesSpecs models.AccessoriesSpecs
+	var laptopSpecs models.LaptopSpecsRequest
+	var mobileSpecs models.MobileSpecsRequest
+	var mouseSpecs models.MouseSpecsRequest
+	var monitorSpecs models.MonitorSpecsRequest
+	var hardDriveSpecs models.HardDiskSpecsRequest
+	var penDriveSpecs models.PenDriveSpecsRequest
+	var simSpecs models.SimSpecsRequest
+	var accessoriesSpecs models.AccessoriesSpecsRequest
 
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-	
-	if body.Type == "laptop" {
+
+	switch body.AssetType {
+	case "laptop":
 		err := json.Unmarshal(body.Specifications, &laptopSpecs)
 		fmt.Println(laptopSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing laptop specs:", err)
 		}
-	}
-	if body.Type == "mobile" {
+	case "mobile":
 		err := json.Unmarshal(body.Specifications, &mobileSpecs)
 		fmt.Println(mobileSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing mobile specs:", err)
 		}
-	}
-	if body.Type == "mouse" {
+	case "mouse":
 		err := json.Unmarshal(body.Specifications, &mouseSpecs)
 		fmt.Println(mouseSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing mouse specs:", err)
 		}
-	}
-	if body.Type == "monitor" {
+	case "monitor":
 		err := json.Unmarshal(body.Specifications, &monitorSpecs)
 		fmt.Println(monitorSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing monitor specs:", err)
 		}
-	}
-	if body.Type == "hard_drive" {
+	case "hard_disk":
 		err := json.Unmarshal(body.Specifications, &hardDriveSpecs)
 		fmt.Println(hardDriveSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing hard disk specs:", err)
 		}
-	}
-	if body.Type == "pen_drive" {
+	case "pen_drive":
 		err := json.Unmarshal(body.Specifications, &penDriveSpecs)
 		fmt.Println(penDriveSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing pen drive specs:", err)
 		}
-	}
-	if body.Type == "sim" {
+	case "sim":
 		err := json.Unmarshal(body.Specifications, &simSpecs)
 		fmt.Println(simSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing sim specs:", err)
 		}
-	}
-	if body.Type == "accessories" {
+	case "accessories":
 		err := json.Unmarshal(body.Specifications, &accessoriesSpecs)
 		fmt.Println(accessoriesSpecs)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Error parsing accessories specs:", err)
 		}
+	default:
+		fmt.Println("Unknown asset type:", body.AssetType)
 	}
+
 	assetID, err := dbhelper.IsAssetExists(body.Serial)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		fmt.Println(err)
@@ -104,7 +103,7 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		fmt.Println(assetID)
-		switch body.Type {
+		switch body.AssetType {
 		case "laptop":
 			laptopSpecs.AssetID = assetID
 			if err := dbhelper.CreateLaptopSpecs(tx, &laptopSpecs); err != nil {
@@ -145,7 +144,8 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 			if err := dbhelper.CreateAccessoriesSpecs(tx, &accessoriesSpecs); err != nil {
 				return err
 			}
-
+		default:
+			fmt.Println("Unknown type:", body.AssetType)
 		}
 
 		return nil
@@ -181,8 +181,26 @@ func AssignAsset(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusConflict, "asset assigned to someone else")
 		return
 	}
-	if err := dbhelper.AssignAsset(&body); err != nil {
+	status, StatusErr := dbhelper.IsAssetAvailable(body.AssetID)
+	if StatusErr != nil && !errors.Is(StatusErr, sql.ErrNoRows) {
 		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset available")
+		return
+	}
+	if status != "available" {
+		utils.ResponseError(w, http.StatusConflict, "asset is not available")
+		return
+	}
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		if err := dbhelper.AssignAsset(tx, &body); err != nil {
+			return err
+		}
+		if err := dbhelper.ChangeAssetStatus(tx, body.AssetID); err != nil {
+			return err
+		}
+		return nil
+	})
+	if txErr != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to assign asset")
 		return
 	}
@@ -194,4 +212,83 @@ func AssignAsset(w http.ResponseWriter, r *http.Request) {
 		Status:  http.StatusCreated,
 		Message: "asset assigned successfully",
 	})
+}
+
+func GetAssets(w http.ResponseWriter, r *http.Request) {
+	queryParam := r.URL.Query()
+	search := queryParam.Get("search")
+	assetType := queryParam.Get("type")
+	assetStatus := queryParam.Get("status")
+	ownedBy := queryParam.Get("ownedBy")
+
+	assetTypeArray := utils.AssetTypeArray(assetType)
+	assetStatusArray := utils.AssetTypeArray(assetStatus)
+	ownedByArray := utils.AssetTypeArray(ownedBy)
+
+	var filters models.AssetFilter
+
+	filters.Search = search
+	filters.AssetType = assetTypeArray
+	filters.AssetStatus = assetStatusArray
+	filters.OwnedType = ownedByArray
+	filters.IsSearchText = strings.TrimSpace(search) != ""
+	filters.Limit, filters.Offset = utils.Pagination(r)
+
+	body, err := dbhelper.GetAllAssets(&filters)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get assets")
+		return
+	}
+	for i := range body {
+		var spec interface{}
+		switch body[i].AssetType {
+		case "laptop":
+			var laptopSpec models.LaptopSpecsResponse
+			spec, err = dbhelper.GetLaptopSpec(body[i].ID)
+			fmt.Println(laptopSpec)
+
+		//case "mobile":
+		//	spec, err = dbhelper.GetMobileSpec(body[i].ID)
+		//case "mouse":
+		//	spec, err = dbhelper.GetMouseSpec(body[i].ID)
+		//case "monitor":
+		//	spec, err = dbhelper.GetMonitorSpec(body[i].ID)
+		//case "hard_disk":
+		//	spec, err = dbhelper.GetHardDiskSpec(body[i].ID)
+		//case "pen_drive":
+		//	spec, err = dbhelper.GetPenDriveSpec(body[i].ID)
+		//case "sim":
+		//	spec, err = dbhelper.GetSimSpec(body[i].ID)
+		//case "accessories":
+		//	spec, err = dbhelper.GetAccessoriesSpec(body[i].ID)
+		default:
+			continue
+		}
+
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			fmt.Println("error fetching spec for asset ID:", body[i].ID, "→", err)
+			utils.ResponseError(w, http.StatusInternalServerError, "failed to fetch specifications")
+			return
+		}
+
+		body[i].Specifications = spec
+	}
+	fmt.Println(body)
+
+	utils.ResponseJSON(w, http.StatusOK, body)
+
+}
+
+func AssetTimeline(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	assetID := vars["asset-id"]
+	fmt.Println(assetID)
+	body, err := dbhelper.AssetTimeline(assetID)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get asset timeline")
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, body)
 }

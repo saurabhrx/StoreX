@@ -1,7 +1,6 @@
 package dbhelper
 
 import (
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"storeX/database"
@@ -62,32 +61,59 @@ func CreateUser(db sqlx.Ext, body *models.CreateUserRequest) (string, error) {
 	return userID, nil
 }
 
-func GetUsers(search string, empRole, empType []string) ([]models.UserResponse, error) {
-	fmt.Println(empRole, empType)
-	query := `SELECT CONCAT(e.first_name,' ',e.last_name) AS name, 
+func GetUsers(filters *models.UserFilter) ([]models.UserResponse, error) {
+	args := []interface{}{
+		!filters.IsSearchText,
+		filters.Search,
+		pq.Array(filters.EmpRole),
+		pq.Array(filters.EmpType),
+		filters.Limit,
+		filters.Offset,
+	}
+
+	query := `SELECT e.id,
+                     CONCAT(e.first_name,' ',COALESCE(e.last_name, '')) AS name, 
                      e.email, 
                      e.phone_no,
                      t.type, 
                      r.role, 
-                     ARRAY_AGG(DISTINCT a.id) AS assets
+                     COALESCE( ARRAY_AGG(DISTINCT a.id) FILTER (WHERE a.id IS NOT NULL),
+                      '{}') AS assets,
+                     e.created_at
               FROM employees e
               JOIN employee_role r ON e.id = r.employee_id
               JOIN employee_type t ON e.id = t.employee_id
-              JOIN assigned_asset aa ON e.id = aa.employee_id
-              JOIN assets a ON aa.asset_id = a.id
-              WHERE ($1 = '' OR 
-                     CONCAT(e.first_name, ' ', e.last_name) ILIKE $2 OR 
-                     e.email ILIKE $2 OR 
-                     e.phone_no ILIKE $2)
-                AND (r.role = ANY($3::role_type[]))
-                AND ( t.type = ANY($4::empl_type[]))
-              GROUP BY e.first_name, e.last_name, e.email, e.phone_no, t.type, r.role`
+              LEFT JOIN assigned_asset aa ON e.id = aa.employee_id
+              LEFT JOIN assets a ON aa.asset_id = a.id
+              WHERE ($1 OR 
+                     CONCAT(e.first_name, ' ', e.last_name) ILIKE '%' || $2::TEXT || '%' OR 
+                     e.email  ILIKE '%' || $2::TEXT || '%'  OR 
+                     e.phone_no  ILIKE '%' || $2::TEXT || '%' )
+                AND (CARDINALITY($3::role_type[])=0 OR r.role = ANY($3::role_type[]))
+                AND (CARDINALITY($4::empl_type[])=0 OR t.type = ANY($4::empl_type[]))
+                AND e.archived_at IS NULL
+              GROUP BY e.id, t.type, r.role,e.created_at
+              ORDER BY e.created_at DESC 
+              LIMIT $5 OFFSET $6`
 
-	finalSearch := "%" + search + "%"
 	var users []models.UserResponse
-	err := database.STOREX.Select(&users, query, search, finalSearch, pq.Array(empRole), pq.Array(empType))
+	err := database.STOREX.Select(&users, query, args...)
 	if err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+func UserTimeline(userID string) (models.UserTimeline, error) {
+	query := `SELECT a.id , a.asset_type,aa.start_date,aa.end_date 
+               FROM employees e
+               JOIN assigned_asset aa ON aa.employee_id=e.id AND e.id=$1
+               JOIN assets a ON a.id=aa.asset_id ORDER BY aa.start_date DESC`
+	var body models.UserTimeline
+	body.ID = userID
+	err := database.STOREX.Select(&body.Assets, query, userID)
+	if err != nil {
+		return models.UserTimeline{}, err
+	}
+	return body, nil
 }

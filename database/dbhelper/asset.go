@@ -1,7 +1,9 @@
 package dbhelper
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"storeX/database"
 	"storeX/models"
 )
@@ -36,24 +38,44 @@ func IsAssetAssign(assetID string) (string, error) {
 	return emplID, nil
 
 }
-func AssignAsset(body *models.AssignAssetRequest) error {
+func IsAssetAvailable(assetID string) (string, error) {
+	query := `SELECT status FROM assets WHERE id=$1`
+	var status string
+	err := database.STOREX.Get(&status, query, assetID)
+	fmt.Println(status)
+	if err != nil {
+		return "", err
+	}
+	return status, nil
+
+}
+
+func AssignAsset(db sqlx.Ext, body *models.AssignAssetRequest) error {
 	query := `INSERT INTO assigned_asset(asset_id, employee_id) VALUES ($1,$2)`
-	_, err := database.STOREX.Exec(query, body.AssetID, body.EmployeeID)
+	_, err := db.Exec(query, body.AssetID, body.EmployeeID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func CreateLaptopSpecs(db sqlx.Ext, specs *models.LaptopSpecs) error {
+func ChangeAssetStatus(db sqlx.Ext, assetID string) error {
+	query := `UPDATE assets SET status='assigned' WHERE id=$1`
+	_, err := db.Exec(query, assetID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func CreateLaptopSpecs(db sqlx.Ext, specs *models.LaptopSpecsRequest) error {
 	query := `INSERT INTO laptop_specs(asset_id, ram, storage_capacity, processor, os) 
-              VALUES($1,$2,$3,$4,$5) `
+              VALUES($1,$2,$3,$4,$5)`
 	_, err := db.Exec(query, specs.AssetID, specs.Ram, specs.Storage, specs.Processor, specs.OS)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func CreateMobileSpecs(db sqlx.Ext, specs *models.MobileSpecs) error {
+func CreateMobileSpecs(db sqlx.Ext, specs *models.MobileSpecsRequest) error {
 	query := `INSERT INTO mobile_specs(asset_id, ram, storage_capacity, os, imei_1, imei_2) 
               VALUES($1,$2,$3,$4,$5,$6) `
 	_, err := db.Exec(query, specs.AssetID, specs.Ram, specs.Storage, specs.OS, specs.IMEI1, specs.IMEI2)
@@ -62,7 +84,7 @@ func CreateMobileSpecs(db sqlx.Ext, specs *models.MobileSpecs) error {
 	}
 	return nil
 }
-func CreateMouseSpecs(db sqlx.Ext, specs *models.MouseSpecs) error {
+func CreateMouseSpecs(db sqlx.Ext, specs *models.MouseSpecsRequest) error {
 	query := `INSERT INTO mouse_specs(asset_id, connection_type, dpi) 
               VALUES($1,$2,$3) `
 	_, err := db.Exec(query, specs.AssetID, specs.ConnectionType, specs.DPI)
@@ -71,7 +93,7 @@ func CreateMouseSpecs(db sqlx.Ext, specs *models.MouseSpecs) error {
 	}
 	return nil
 }
-func CreateMonitorSpecs(db sqlx.Ext, specs *models.MonitorSpecs) error {
+func CreateMonitorSpecs(db sqlx.Ext, specs *models.MonitorSpecsRequest) error {
 	query := `INSERT INTO monitor_specs(asset_id, screen_size, resolution) 
               VALUES($1,$2,$3) `
 	_, err := db.Exec(query, specs.AssetID, specs.AssetID, specs.ScreenSize, specs.Resolution)
@@ -80,7 +102,7 @@ func CreateMonitorSpecs(db sqlx.Ext, specs *models.MonitorSpecs) error {
 	}
 	return nil
 }
-func CreateHardDiskSpecs(db sqlx.Ext, specs *models.HardDiskSpecs) error {
+func CreateHardDiskSpecs(db sqlx.Ext, specs *models.HardDiskSpecsRequest) error {
 	query := `INSERT INTO hard_disk_specs(asset_id, type, capacity, interface, rpm) 
               VALUES($1,$2,$3,$4,$5) `
 	_, err := db.Exec(query, specs.AssetID, specs.Type, specs.Capacity, specs.Interface, specs.RPM)
@@ -89,7 +111,7 @@ func CreateHardDiskSpecs(db sqlx.Ext, specs *models.HardDiskSpecs) error {
 	}
 	return nil
 }
-func CreatePenDriveSpecs(db sqlx.Ext, specs *models.PenDriveSpecs) error {
+func CreatePenDriveSpecs(db sqlx.Ext, specs *models.PenDriveSpecsRequest) error {
 	query := `INSERT INTO pen_drive_specs(asset_id, capacity, interface) 
               VALUES($1,$2,$3) `
 	_, err := db.Exec(query, specs.AssetID, specs.Capacity, specs.Interface)
@@ -98,7 +120,7 @@ func CreatePenDriveSpecs(db sqlx.Ext, specs *models.PenDriveSpecs) error {
 	}
 	return nil
 }
-func CreateSimSpecs(db sqlx.Ext, specs *models.SimSpecs) error {
+func CreateSimSpecs(db sqlx.Ext, specs *models.SimSpecsRequest) error {
 	query := `INSERT INTO sim_specs(asset_id, sim_number, career, plan_type, activation_date) 
               VALUES($1,$2,$3,$4,$5) `
 	_, err := db.Exec(query, specs.AssetID, specs.SimNumber, specs.Career, specs.PlanType, specs.ActivationDate)
@@ -107,7 +129,7 @@ func CreateSimSpecs(db sqlx.Ext, specs *models.SimSpecs) error {
 	}
 	return nil
 }
-func CreateAccessoriesSpecs(db sqlx.Ext, specs *models.AccessoriesSpecs) error {
+func CreateAccessoriesSpecs(db sqlx.Ext, specs *models.AccessoriesSpecsRequest) error {
 	query := `INSERT INTO accessories_specs(asset_id, type) 
               VALUES($1,$2) `
 	_, err := db.Exec(query, specs.AssetID, specs.Type)
@@ -115,4 +137,75 @@ func CreateAccessoriesSpecs(db sqlx.Ext, specs *models.AccessoriesSpecs) error {
 		return err
 	}
 	return nil
+}
+
+func GetAllAssets(filters *models.AssetFilter) ([]models.AssetResponse, error) {
+	args := []interface{}{
+		!filters.IsSearchText,
+		filters.Search,
+		pq.Array(filters.AssetStatus),
+		pq.Array(filters.AssetType),
+		pq.Array(filters.OwnedType),
+		filters.Limit,
+		filters.Offset,
+	}
+
+	query := `SELECT assets.id,
+       assets.brand,
+       assets.model,
+       assets.asset_type,
+       assets.serial_no,
+       assets.status,
+       assets.owned_by,
+       assets.purchased_at,
+       CONCAT(first_name,' ',COALESCE(e.last_name, '')) as assigned_to,
+       aa.start_date  as assigned_date
+FROM assets
+         JOIN assigned_asset aa ON assets.id = aa.asset_id
+         JOIN employees e ON aa.employee_id=e.id
+WHERE ($1 OR assets.brand ILIKE '%' || $2::TEXT || '%'
+    OR assets.model ILIKE '%' || $2::TEXT || '%' 
+    OR assets.serial_no ILIKE '%' || $2::TEXT || '%'
+    OR CONCAT(first_name,' ',e.last_name) ILIKE '%' || $2::TEXT || '%') 
+    AND (CARDINALITY($3::status_type[])=0 OR assets.status=ANY($3::status_type[]))
+    AND (CARDINALITY($4::assets_type[])=0 OR assets.asset_type=ANY($4::assets_type[]))
+    AND (CARDINALITY($5::owned_type[])=0 OR assets.owned_by=ANY($5::owned_type[]))
+    AND assets.archived_at IS NULL 
+    ORDER BY aa.start_date DESC 
+    LIMIT $6 OFFSET $7`
+
+	var users []models.AssetResponse
+	err := database.STOREX.Select(&users, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+
+}
+
+func AssetTimeline(assetID string) (models.AssetTimeline, error) {
+	query := `SELECT e.id, CONCAT(first_name,' ',COALESCE(e.last_name, '')) as name,
+               e.email ,aa.start_date,aa.end_date
+               FROM employees e
+               JOIN assigned_asset aa ON aa.employee_id=e.id AND aa.asset_id=$1
+               ORDER BY aa.start_date DESC`
+	var body models.AssetTimeline
+	body.AssetID = assetID
+	err := database.STOREX.Select(&body.Employee, query, assetID)
+	if err != nil {
+		return models.AssetTimeline{}, err
+	}
+	return body, nil
+}
+
+func GetLaptopSpec(assetID string) (models.LaptopSpecsResponse, error) {
+	query := `SELECT ram,storage_capacity as storage , processor,os 
+              FROM laptop_specs WHERE asset_id=$1`
+	var body models.LaptopSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.LaptopSpecsResponse{}, err
+	}
+	return body, nil
+
 }
