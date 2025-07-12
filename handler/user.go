@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"net/http"
 	"storeX/database"
@@ -11,6 +12,7 @@ import (
 	"storeX/middleware"
 	"storeX/models"
 	"storeX/utils"
+	"strings"
 )
 
 func LoginUser(w http.ResponseWriter, r *http.Request) {
@@ -161,21 +163,38 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GetEmployees(w http.ResponseWriter, r *http.Request) {
+func GetUsers(w http.ResponseWriter, r *http.Request) {
 	queryParam := r.URL.Query()
 	search := queryParam.Get("search")
 	empRole := queryParam.Get("role")
 	empType := queryParam.Get("type")
-	empRoleArray := utils.RoleArray(empRole)
-	empTypeArray := utils.TypeArray(empType)
+	empRoleArray := utils.UserRoleArray(empRole)
+	empTypeArray := utils.UserTypeArray(empType)
 
-	fmt.Println(search)
-	fmt.Println(empRoleArray)
-	fmt.Println("type...", empTypeArray)
-
-	body, err := dbhelper.GetUsers(search, empRoleArray, empTypeArray)
+	var filters models.UserFilter
+	filters.Search = search
+	filters.EmpType = empTypeArray
+	filters.EmpRole = empRoleArray
+	filters.Limit, filters.Offset = utils.Pagination(r)
+	filters.IsSearchText = strings.TrimSpace(search) != ""
+	body, err := dbhelper.GetUsers(&filters)
 	if err != nil {
 		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get users")
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, body)
+}
+
+func UserTimeline(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["user-id"]
+	fmt.Println(userID)
+	body, err := dbhelper.UserTimeline(userID)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get user timeline")
+		return
 	}
 	utils.ResponseJSON(w, http.StatusOK, body)
 }

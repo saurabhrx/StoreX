@@ -1,6 +1,9 @@
 package models
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"github.com/guregu/null"
+)
 
 type CreateAssetRequest struct {
 	Brand          string          `json:"brand"`
@@ -9,19 +12,18 @@ type CreateAssetRequest struct {
 	AssetType      string          `json:"assetType"`
 	OwnedBy        string          `json:"ownedBy"`
 	PurchasedAt    string          `json:"purchasedAt"`
-	Price          int             `json:"price"`
+	Price          float64         `json:"price"`
 	CreatedBy      string          `json:"createdBy"`
-	Type           string          `json:"type"`
 	Specifications json.RawMessage `json:"specifications"`
 }
-type LaptopSpecs struct {
+type LaptopSpecsRequest struct {
 	AssetID   string `json:"assetID"`
 	Ram       int    `json:"ram"`
 	Storage   int    `json:"storage"`
 	Processor string `json:"processor"`
 	OS        string `json:"os"`
 }
-type MobileSpecs struct {
+type MobileSpecsRequest struct {
 	AssetID string `json:"assetID"`
 	Ram     int    `json:"ram"`
 	Storage int    `json:"storage"`
@@ -29,18 +31,18 @@ type MobileSpecs struct {
 	IMEI1   string `json:"imei_1"`
 	IMEI2   string `json:"imei_2"`
 }
-type MonitorSpecs struct {
+type MonitorSpecsRequest struct {
 	AssetID    string  `json:"assetID"`
 	ScreenSize float64 `json:"screenSize"`
 	Resolution string  `json:"resolution"`
 }
-type MouseSpecs struct {
+type MouseSpecsRequest struct {
 	AssetID        string `json:"assetID"`
 	ConnectionType string `json:"connectionType"`
 	DPI            int    `json:"dpi"`
 }
 
-type HardDiskSpecs struct {
+type HardDiskSpecsRequest struct {
 	AssetID   string `json:"assetID"`
 	Type      string `json:"type"`
 	Capacity  int    `json:"capacity"`
@@ -48,24 +50,99 @@ type HardDiskSpecs struct {
 	RPM       int    `json:"rpm"`
 }
 
-type PenDriveSpecs struct {
+type PenDriveSpecsRequest struct {
 	AssetID   string `json:"assetID"`
 	Capacity  int    `json:"capacity"`
 	Interface string `json:"interface"`
 }
-type SimSpecs struct {
+type SimSpecsRequest struct {
 	AssetID        string `json:"assetID"`
 	SimNumber      string `json:"simNumber"`
 	Career         string `json:"career"`
 	PlanType       string `json:"planType"`
 	ActivationDate string `json:"activationDate"`
 }
-type AccessoriesSpecs struct {
+type AccessoriesSpecsRequest struct {
 	AssetID string `json:"assetID"`
 	Type    string `json:"type"`
 }
 
 type AssignAssetRequest struct {
+	EmployeeID string `json:"employeeID"`
+	AssetID    string `json:"assetID"`
+}
+
+type AssetResponse struct {
+	ID             string      `json:"id" db:"id"`
+	Brand          string      `json:"brand" db:"brand"`
+	Model          string      `json:"model" db:"model"`
+	AssetType      string      `json:"assetType" db:"asset_type"`
+	Serial         string      `json:"serial" db:"serial_no"`
+	AssetStatus    string      `json:"assetStatus" db:"status"`
+	AssignedTo     string      `json:"assignedTo" db:"assigned_to"`
+	AssignedDate   string      `json:"assignedDate" db:"assigned_date"`
+	OwnedBy        string      `json:"ownedBy" db:"owned_by"`
+	PurchasedAt    string      `json:"purchasedAt" db:"purchased_at"`
+	Specifications interface{} `json:"specifications" db:"specifications"`
+}
+
+type AssetTimeline struct {
+	AssetID  string            `json:"assetId" db:"asset_id"`
+	Employee []AssetAssignedTo `json:"employee" db:"employee"`
+}
+
+type AssetAssignedTo struct {
+	EmpID     string      `json:"empID" db:"id"`
+	Name      string      `json:"name" db:"name"`
+	Email     string      `json:"email" db:"email"`
+	StartDate string      `json:"startDate" db:"start_date"`
+	EndDate   null.String `json:"endDate" db:"end_date"`
+}
+
+type LaptopSpecsResponse struct {
+	Ram       int    `json:"ram"`
+	Storage   int    `json:"storage"`
+	Processor string `json:"processor"`
+	OS        string `json:"os"`
+}
+type MobileSpecsResponse struct {
+	Ram     int    `json:"ram"`
+	Storage int    `json:"storage"`
+	OS      string `json:"os"`
+	IMEI1   string `json:"imei_1"`
+	IMEI2   string `json:"imei_2"`
+}
+type MonitorSpecsResponse struct {
+	ScreenSize float64 `json:"screenSize"`
+	Resolution string  `json:"resolution"`
+}
+type MouseSpecsResponse struct {
+	ConnectionType string `json:"connectionType"`
+	DPI            int    `json:"dpi"`
+}
+
+type HardDiskSpecsResponse struct {
+	Type      string `json:"type"`
+	Capacity  int    `json:"capacity"`
+	Interface string `json:"interface"`
+	RPM       int    `json:"rpm"`
+}
+
+type PenDriveSpecsResponse struct {
+	Capacity  int    `json:"capacity"`
+	Interface string `json:"interface"`
+}
+type SimSpecsResponse struct {
+	SimNumber      string `json:"simNumber"`
+	Career         string `json:"career"`
+	PlanType       string `json:"planType"`
+	ActivationDate string `json:"activationDate"`
+}
+type AccessoriesSpecsResponse struct {
+	Type string `json:"type"`
+}
+
+type AssignAssetResponse struct {
 	EmployeeID string `json:"employeeID"`
 	AssetID    string `json:"assetID"`
 }

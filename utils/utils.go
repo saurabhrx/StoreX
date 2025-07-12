@@ -76,11 +76,33 @@ func SplitName(email string) (string, string) {
 	return firstName, lastName
 }
 
-func RoleArray(empRole string) []string {
-	result := strings.Split(empRole, ",")
-	return result
+func UserRoleArray(empRole string) []string {
+	if empRole == "" {
+		return []string{}
+	}
+	return strings.Split(empRole, ",")
 }
-func TypeArray(empType string) []string {
-	result := strings.Split(empType, ",")
-	return result
+func UserTypeArray(empType string) []string {
+	if empType == "" {
+		return []string{}
+	}
+	return strings.Split(empType, ",")
+}
+func AssetTypeArray(assetType string) []string {
+	if assetType == "" {
+		return []string{}
+	}
+	return strings.Split(assetType, ",")
+}
+func AssetStatusArray(status string) []string {
+	if status == "" {
+		return []string{}
+	}
+	return strings.Split(status, ",")
+}
+func OwnedByArray(ownedBy string) []string {
+	if ownedBy == "" {
+		return []string{}
+	}
+	return strings.Split(ownedBy, ",")
 }

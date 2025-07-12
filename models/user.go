@@ -1,6 +1,9 @@
 package models
 
-import "github.com/guregu/null"
+import (
+	"github.com/guregu/null"
+	"github.com/lib/pq"
+)
 
 const (
 	RoleAdmin           = "admin"
@@ -39,10 +42,23 @@ type CreateUserRequest struct {
 }
 
 type UserResponse struct {
-	Name   string      `json:"name" db:"name"`
-	Email  null.String `json:"email" db:"email"`
-	Phone  null.String `json:"phone_no" db:"phone_no"`
-	Assets []string    `json:"assets" db:"assets"`
-	Role   string      `json:"role" db:"role"`
-	Type   string      `json:"type" db:"type"`
+	ID        string         `json:"id"db:"id"`
+	Name      string         `json:"name" db:"name"`
+	Email     null.String    `json:"email" db:"email"`
+	Phone     null.String    `json:"phone_no" db:"phone_no"`
+	Assets    pq.StringArray `json:"assets" db:"assets"`
+	Role      string         `json:"role" db:"role"`
+	Type      string         `json:"type" db:"type"`
+	CreatedAt string         `json:"createdAt" db:"created_at"`
+}
+
+type UserTimeline struct {
+	ID     string          `json:"id" db:"id"`
+	Assets []AssignedAsset `json:"assets" db:"assets"`
+}
+type AssignedAsset struct {
+	AssetID   string      `json:"assetID" db:"id"`
+	Type      string      `json:"type" db:"asset_type"`
+	StartDate string      `json:"startDate" db:"start_date"`
+	EndDate   null.String `json:"endDate" db:"end_date"`
 }
