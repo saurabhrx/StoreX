@@ -14,20 +14,23 @@ type ContextKey string
 
 const (
 	userContext ContextKey = "userKey"
+	nameContext            = "userName"
 	roleContext ContextKey = "roleKey"
 )
 
 type Claims struct {
 	UserID string `json:"user_id"`
+	Name   string `json:"name"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 var jwtSecret = []byte(os.Getenv("SECRET_KEY"))
 
-func GenerateAccessToken(userID string, roleType string) (string, error) {
+func GenerateAccessToken(userID, roleType, name string) (string, error) {
 	accessClaims := &Claims{
 		UserID: userID,
+		Name:   name,
 		Role:   roleType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
@@ -75,6 +78,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		// access token is valid
 		if err == nil && token.Valid {
 			ctx := context.WithValue(r.Context(), userContext, accessClaims.UserID)
+			ctx = context.WithValue(ctx, nameContext, accessClaims.Name)
 			ctx = context.WithValue(ctx, roleContext, accessClaims.Role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
@@ -89,6 +93,13 @@ func AuthMiddleware(next http.Handler) http.Handler {
 func UserContext(r *http.Request) string {
 	if user, ok := r.Context().Value(userContext).(string); ok && user != "" {
 		return user
+	}
+	return ""
+
+}
+func NameContext(r *http.Request) string {
+	if name, ok := r.Context().Value(nameContext).(string); ok && name != "" {
+		return name
 	}
 	return ""
 

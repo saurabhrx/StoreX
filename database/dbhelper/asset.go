@@ -58,9 +58,9 @@ func AssignAsset(db sqlx.Ext, body *models.AssignAssetRequest) error {
 	}
 	return nil
 }
-func ChangeAssetStatus(db sqlx.Ext, assetID string) error {
-	query := `UPDATE assets SET status='assigned' WHERE id=$1`
-	_, err := db.Exec(query, assetID)
+func ChangeAssetStatus(db sqlx.Ext, assetID, status string) error {
+	query := `UPDATE assets SET status=$2 WHERE id=$1`
+	_, err := db.Exec(query, assetID, status)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func CreateMouseSpecs(db sqlx.Ext, specs *models.MouseSpecsRequest) error {
 func CreateMonitorSpecs(db sqlx.Ext, specs *models.MonitorSpecsRequest) error {
 	query := `INSERT INTO monitor_specs(asset_id, screen_size, resolution) 
               VALUES($1,$2,$3) `
-	_, err := db.Exec(query, specs.AssetID, specs.AssetID, specs.ScreenSize, specs.Resolution)
+	_, err := db.Exec(query, specs.AssetID, specs.ScreenSize, specs.Resolution)
 	if err != nil {
 		return err
 	}
@@ -138,6 +138,15 @@ func CreateAccessoriesSpecs(db sqlx.Ext, specs *models.AccessoriesSpecsRequest) 
 	}
 	return nil
 }
+func CreateWarranty(db sqlx.Ext, assetID, warrantyStart, warrantyEnd string) error {
+	query := `INSERT INTO warranty(asset_id, start_date,end_date) 
+              VALUES($1,$2,$3) `
+	_, err := db.Exec(query, assetID, warrantyStart, warrantyEnd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func GetAllAssets(filters *models.AssetFilter) ([]models.AssetResponse, error) {
 	args := []interface{}{
@@ -161,8 +170,8 @@ func GetAllAssets(filters *models.AssetFilter) ([]models.AssetResponse, error) {
        CONCAT(first_name,' ',COALESCE(e.last_name, '')) as assigned_to,
        aa.start_date  as assigned_date
 FROM assets
-         JOIN assigned_asset aa ON assets.id = aa.asset_id
-         JOIN employees e ON aa.employee_id=e.id
+         LEFT JOIN assigned_asset aa ON assets.id = aa.asset_id
+         LEFT JOIN employees e ON aa.employee_id=e.id
 WHERE ($1 OR assets.brand ILIKE '%' || $2::TEXT || '%'
     OR assets.model ILIKE '%' || $2::TEXT || '%' 
     OR assets.serial_no ILIKE '%' || $2::TEXT || '%'
@@ -205,6 +214,117 @@ func GetLaptopSpec(assetID string) (models.LaptopSpecsResponse, error) {
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
 		return models.LaptopSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetMobileSpec(assetID string) (models.MobileSpecsResponse, error) {
+	query := `SELECT ram,storage_capacity as storage,os,imei_1,imei_2
+              FROM mobile_specs WHERE asset_id=$1`
+	var body models.MobileSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.MobileSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetMouseSpec(assetID string) (models.MouseSpecsResponse, error) {
+	query := `SELECT connection_type,dpi
+              FROM mouse_specs WHERE asset_id=$1`
+	var body models.MouseSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.MouseSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetMonitorSpec(assetID string) (models.MonitorSpecsResponse, error) {
+	query := `SELECT  screen_size,resolution
+              FROM monitor_specs WHERE asset_id=$1`
+	var body models.MonitorSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.MonitorSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetHardDiskSpec(assetID string) (models.HardDiskSpecsResponse, error) {
+	query := `SELECT  type,capacity,interface,rpm
+              FROM hard_disk_specs WHERE asset_id=$1`
+	var body models.HardDiskSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.HardDiskSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetPenDriveSpec(assetID string) (models.PenDriveSpecsResponse, error) {
+	query := `SELECT capacity,interface
+              FROM pen_drive_specs WHERE asset_id=$1`
+	var body models.PenDriveSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.PenDriveSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func GetSimSpec(assetID string) (models.SimSpecsResponse, error) {
+	query := `SELECT sim_number,career,plan_type,activation_date
+              FROM sim_specs WHERE asset_id=$1`
+	var body models.SimSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.SimSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+func GetAccessoriesSpec(assetID string) (models.AccessoriesSpecsResponse, error) {
+	query := `SELECT type
+              FROM accessories_specs WHERE asset_id=$1`
+	var body models.AccessoriesSpecsResponse
+	err := database.STOREX.Get(&body, query, assetID)
+	if err != nil {
+		return models.AccessoriesSpecsResponse{}, err
+	}
+	return body, nil
+
+}
+
+func UnassignAsset(db sqlx.Ext, assetID string) error {
+	query := `UPDATE assigned_asset SET end_date=NOW() WHERE asset_id=$1`
+	_, err := db.Exec(query, assetID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func AssetStats() (models.AssetStatsResponse, error) {
+	query := `SELECT COUNT(*) as total,
+                COUNT(*) FILTER (WHERE status = 'available') as available,
+                COUNT(*) FILTER (WHERE status = 'assigned') as assigned,
+                COUNT(*) FILTER (WHERE status = 'waiting_for_repair') as waiting_for_repair,
+                COUNT(*) FILTER (WHERE status = 'service') as service,
+                COUNT(*) FILTER (WHERE status = 'damaged') as damaged
+              FROM assets
+              WHERE archived_at IS NULL`
+
+	var body models.AssetStatsResponse
+	err := database.STOREX.Get(&body, query)
+	if err != nil {
+		return models.AssetStatsResponse{}, err
 	}
 	return body, nil
 

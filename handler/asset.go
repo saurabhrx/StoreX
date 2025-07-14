@@ -28,6 +28,7 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	var accessoriesSpecs models.AccessoriesSpecsRequest
 
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
@@ -102,7 +103,9 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		fmt.Println(assetID)
+		if err := dbhelper.CreateWarranty(tx, assetID, body.WarrantyStartDate, body.WarrantyEndDate); err != nil {
+			return err
+		}
 		switch body.AssetType {
 		case "laptop":
 			laptopSpecs.AssetID = assetID
@@ -195,7 +198,7 @@ func AssignAsset(w http.ResponseWriter, r *http.Request) {
 		if err := dbhelper.AssignAsset(tx, &body); err != nil {
 			return err
 		}
-		if err := dbhelper.ChangeAssetStatus(tx, body.AssetID); err != nil {
+		if err := dbhelper.ChangeAssetStatus(tx, body.AssetID, "assigned"); err != nil {
 			return err
 		}
 		return nil
@@ -244,30 +247,27 @@ func GetAssets(w http.ResponseWriter, r *http.Request) {
 		var spec interface{}
 		switch body[i].AssetType {
 		case "laptop":
-			var laptopSpec models.LaptopSpecsResponse
 			spec, err = dbhelper.GetLaptopSpec(body[i].ID)
-			fmt.Println(laptopSpec)
-
-		//case "mobile":
-		//	spec, err = dbhelper.GetMobileSpec(body[i].ID)
-		//case "mouse":
-		//	spec, err = dbhelper.GetMouseSpec(body[i].ID)
-		//case "monitor":
-		//	spec, err = dbhelper.GetMonitorSpec(body[i].ID)
-		//case "hard_disk":
-		//	spec, err = dbhelper.GetHardDiskSpec(body[i].ID)
-		//case "pen_drive":
-		//	spec, err = dbhelper.GetPenDriveSpec(body[i].ID)
-		//case "sim":
-		//	spec, err = dbhelper.GetSimSpec(body[i].ID)
-		//case "accessories":
-		//	spec, err = dbhelper.GetAccessoriesSpec(body[i].ID)
+		case "mobile":
+			spec, err = dbhelper.GetMobileSpec(body[i].ID)
+		case "mouse":
+			spec, err = dbhelper.GetMouseSpec(body[i].ID)
+		case "monitor":
+			spec, err = dbhelper.GetMonitorSpec(body[i].ID)
+		case "hard_disk":
+			spec, err = dbhelper.GetHardDiskSpec(body[i].ID)
+		case "pen_drive":
+			spec, err = dbhelper.GetPenDriveSpec(body[i].ID)
+		case "sim":
+			spec, err = dbhelper.GetSimSpec(body[i].ID)
+		case "accessories":
+			spec, err = dbhelper.GetAccessoriesSpec(body[i].ID)
 		default:
 			continue
 		}
 
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			fmt.Println("error fetching spec for asset ID:", body[i].ID, "→", err)
+			fmt.Println("error fetching spec for asset ID:", body[i].ID, err)
 			utils.ResponseError(w, http.StatusInternalServerError, "failed to fetch specifications")
 			return
 		}
@@ -288,6 +288,41 @@ func AssetTimeline(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get asset timeline")
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, body)
+}
+
+func UnassignAsset(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	assetID := vars["asset-id"]
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		if err := dbhelper.UnassignAsset(tx, assetID); err != nil {
+			return err
+		}
+		if err := dbhelper.ChangeAssetStatus(tx, assetID, "available"); err != nil {
+			return err
+		}
+		return nil
+	})
+	if txErr != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to unassign the asset")
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusCreated,
+		Message: "asset unassigned successfully",
+	})
+}
+
+func AssetStats(w http.ResponseWriter, r *http.Request) {
+	body, err := dbhelper.AssetStats()
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get asset counts")
 		return
 	}
 	utils.ResponseJSON(w, http.StatusOK, body)

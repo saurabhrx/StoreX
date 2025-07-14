@@ -71,7 +71,8 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	accessToken, accessErr := middleware.GenerateAccessToken(userID, empRole)
+	name := body.FirstName + " " + body.LastName
+	accessToken, accessErr := middleware.GenerateAccessToken(userID, empRole, name)
 	refreshToken, refreshErr := middleware.GenerateRefreshToken(userID)
 	if accessErr != nil || refreshErr != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "could not generate jwt token")
@@ -197,4 +198,65 @@ func UserTimeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.ResponseJSON(w, http.StatusOK, body)
+}
+
+func Dashboard(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserContext(r)
+	name := middleware.NameContext(r)
+	var body models.DashboardResponse
+	body.ID = userID
+	body.Name = name
+	err := dbhelper.Dashboard(userID, &body)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to get dashboard")
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, body)
+}
+
+func UpdateUserDetails(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["user-id"]
+	var body models.UpdateUserDetails
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		fmt.Println(parseErr)
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
+		return
+	}
+	body.UserID = userID
+	err := dbhelper.UpdateUserDetails(&body)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to update user details")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "user updated successfully",
+	})
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["user-id"]
+
+	err := dbhelper.DeleteUser(userID)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to delete user")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "user deleted successfully",
+	})
 }
