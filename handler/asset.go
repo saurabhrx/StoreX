@@ -327,3 +327,33 @@ func AssetStats(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.ResponseJSON(w, http.StatusOK, body)
 }
+
+func DeleteAsset(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	assetID := vars["asset-id"]
+	emplID, err := dbhelper.IsAssetAssign(assetID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset assigned")
+		return
+	}
+	if emplID != "" {
+		utils.ResponseError(w, http.StatusConflict, "asset assigned to someone")
+		return
+	}
+	err = dbhelper.DeleteAsset(assetID)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to delete user")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "asset deleted successfully",
+	})
+
+}

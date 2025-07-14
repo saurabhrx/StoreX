@@ -260,3 +260,51 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		Message: "user deleted successfully",
 	})
 }
+
+func RoleChange(w http.ResponseWriter, r *http.Request) {
+	var body models.UserRoleChangeRequest
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		fmt.Println(parseErr)
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
+		return
+	}
+	err := dbhelper.RoleChange(&body)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to change role")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "user role changed successfully",
+	})
+}
+
+func TypeChange(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("hello...")
+	var body models.UserTypeChangeRequest
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		fmt.Println(parseErr)
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
+		return
+	}
+	fmt.Println(body)
+	err := dbhelper.TypeChange(&body)
+	if err != nil {
+		fmt.Println(err)
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to change type")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "user type changed successfully",
+	})
+}

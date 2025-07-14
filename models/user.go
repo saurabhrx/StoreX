@@ -79,8 +79,17 @@ type AssignedAssetDetails struct {
 }
 
 type UpdateUserDetails struct {
-	UserID    string      `json:"userID" db:"user_id"`
-	FirstName string      `json:"firstName" db:"first_name"`
-	LastName  null.String `json:"lastName" db:"last_name"`
-	Phone     string      `json:"phone" db:"phone"`
+	UserID    string      `json:"userID"`
+	FirstName string      `json:"firstName"`
+	LastName  null.String `json:"lastName"`
+	Phone     string      `json:"phone"`
+}
+
+type UserRoleChangeRequest struct {
+	UserID  string `json:"userID"`
+	NewRole string `json:"newRole"`
+}
+type UserTypeChangeRequest struct {
+	UserID  string `json:"userID"`
+	NewType string `json:"newType"`
 }

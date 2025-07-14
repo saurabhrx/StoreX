@@ -42,5 +42,11 @@ func SetupTodoRoutes() *mux.Router {
 	assetRoutes.HandleFunc("/asset/{asset-id}/unassign", handler.UnassignAsset).Methods("POST")
 	assetRoutes.HandleFunc("/vendor", handler.CreateVendor).Methods("POST")
 	assetRoutes.HandleFunc("/asset/{asset-id}/service", handler.Service).Methods("POST")
+	assetRoutes.HandleFunc("/asset/{asset-id}/delete", handler.DeleteAsset).Methods("DELETE")
+
+	adminOnly := protected.NewRoute().Subrouter()
+	adminOnly.Use(middleware.AuthRole(models.RoleAdmin))
+	adminOnly.HandleFunc("/user/role/change", handler.RoleChange).Methods("PUT")
+	adminOnly.HandleFunc("/user/type/change", handler.TypeChange).Methods("PUT")
 	return srv
 }

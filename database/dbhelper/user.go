@@ -152,3 +152,20 @@ func DeleteUser(userID string) error {
 	}
 	return nil
 }
+
+func RoleChange(body *models.UserRoleChangeRequest) error {
+	query := `UPDATE employee_role SET role=$1 WHERE employee_id=$2`
+	_, err := database.STOREX.Exec(query, body.NewRole, body.UserID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func TypeChange(body *models.UserTypeChangeRequest) error {
+	query := `UPDATE employee_type SET type=$1 WHERE employee_id=$2`
+	_, err := database.STOREX.Exec(query, body.NewType, body.UserID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

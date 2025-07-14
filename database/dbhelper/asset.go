@@ -329,3 +329,13 @@ func AssetStats() (models.AssetStatsResponse, error) {
 	return body, nil
 
 }
+
+func DeleteAsset(assetID string) error {
+	query := `UPDATE assets SET archived_at=NOW()
+               WHERE id=$1`
+	_, err := database.STOREX.Exec(query, assetID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
