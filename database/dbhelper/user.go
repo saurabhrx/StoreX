@@ -117,3 +117,55 @@ func UserTimeline(userID string) (models.UserTimeline, error) {
 	}
 	return body, nil
 }
+func Dashboard(userID string, body *models.DashboardResponse) error {
+	query := `SELECT assets.id, assets.brand , assets.model , assets.serial_no,
+                assets.status , aa.start_date as assigned_date FROM assets
+               JOIN assigned_asset aa ON assets.id = aa.asset_id AND aa.employee_id=$1`
+	err := database.STOREX.Select(&body.Assets, query, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateUserDetails(body *models.UpdateUserDetails) error {
+	args := []interface{}{
+		body.FirstName,
+		body.LastName,
+		body.Phone,
+		body.UserID,
+	}
+	query := `UPDATE employees SET first_name=$1 , last_name=$2 , phone_no=$3
+             WHERE id=$4`
+	_, err := database.STOREX.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func DeleteUser(userID string) error {
+	query := `UPDATE employees SET archived_at=NOW()
+               WHERE id=$1`
+	_, err := database.STOREX.Exec(query, userID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func RoleChange(body *models.UserRoleChangeRequest) error {
+	query := `UPDATE employee_role SET role=$1 WHERE employee_id=$2`
+	_, err := database.STOREX.Exec(query, body.NewRole, body.UserID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func TypeChange(body *models.UserTypeChangeRequest) error {
+	query := `UPDATE employee_type SET type=$1 WHERE employee_id=$2`
+	_, err := database.STOREX.Exec(query, body.NewType, body.UserID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

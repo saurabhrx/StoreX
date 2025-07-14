@@ -42,9 +42,9 @@ type CreateUserRequest struct {
 }
 
 type UserResponse struct {
-	ID        string         `json:"id"db:"id"`
+	ID        string         `json:"id" db:"id"`
 	Name      string         `json:"name" db:"name"`
-	Email     null.String    `json:"email" db:"email"`
+	Email     string         `json:"email" db:"email"`
 	Phone     null.String    `json:"phone_no" db:"phone_no"`
 	Assets    pq.StringArray `json:"assets" db:"assets"`
 	Role      string         `json:"role" db:"role"`
@@ -61,4 +61,35 @@ type AssignedAsset struct {
 	Type      string      `json:"type" db:"asset_type"`
 	StartDate string      `json:"startDate" db:"start_date"`
 	EndDate   null.String `json:"endDate" db:"end_date"`
+}
+
+type DashboardResponse struct {
+	ID     string                 `json:"id" db:"id"`
+	Name   string                 `json:"name" db:"name"`
+	Assets []AssignedAssetDetails `json:"assets" db:"assets"`
+}
+
+type AssignedAssetDetails struct {
+	AssetID      string `json:"assetID" db:"id"`
+	Brand        string `json:"brand" db:"brand"`
+	Model        string `json:"model" db:"model"`
+	Serial       string `json:"serial" db:"serial_no"`
+	AssignedDate string `json:"assignedDate" db:"assigned_date"`
+	Status       string `json:"status" db:"status"`
+}
+
+type UpdateUserDetails struct {
+	UserID    string      `json:"userID"`
+	FirstName string      `json:"firstName"`
+	LastName  null.String `json:"lastName"`
+	Phone     string      `json:"phone"`
+}
+
+type UserRoleChangeRequest struct {
+	UserID  string `json:"userID"`
+	NewRole string `json:"newRole"`
+}
+type UserTypeChangeRequest struct {
+	UserID  string `json:"userID"`
+	NewType string `json:"newType"`
 }
