@@ -105,7 +105,7 @@ func GetUsers(filters *models.UserFilter) ([]models.UserResponse, error) {
 }
 
 func UserTimeline(userID string) (models.UserTimeline, error) {
-	query := `SELECT a.id , a.asset_type,aa.start_date,aa.end_date 
+	query := `SELECT a.id , a.asset_type,a.brand , a.model , a.serial_no, aa.start_date,aa.end_date 
                FROM employees e
                JOIN assigned_asset aa ON aa.employee_id=e.id AND e.id=$1
                JOIN assets a ON a.id=aa.asset_id ORDER BY aa.start_date DESC`
@@ -168,4 +168,17 @@ func TypeChange(body *models.UserTypeChangeRequest) error {
 		return err
 	}
 	return nil
+}
+func GetNameRoleByUserID(userID string) (models.UserNameRole, error) {
+	query := `SELECT CONCAT(e.first_name,' ',e.last_name) as name, et.type as role_type FROM employees e
+                JOIN employee_type et
+                    ON e.id = et.employee_id 
+                           AND e.id =$1`
+	var body models.UserNameRole
+	err := database.STOREX.Get(&body, query, userID)
+	if err != nil {
+		return models.UserNameRole{}, err
+	}
+	return body, nil
+
 }

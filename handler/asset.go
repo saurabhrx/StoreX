@@ -32,61 +32,100 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
+	if err := utils.Validate(body); err != nil {
+		fmt.Println("Validation error:", err)
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	switch body.AssetType {
 	case "laptop":
-		err := json.Unmarshal(body.Specifications, &laptopSpecs)
-		fmt.Println(laptopSpecs)
-		if err != nil {
-			fmt.Println("Error parsing laptop specs:", err)
+		if err := json.Unmarshal(body.Specifications, &laptopSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid laptop specifications format")
+			return
 		}
+		if err := utils.Validate(laptopSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "mobile":
-		err := json.Unmarshal(body.Specifications, &mobileSpecs)
-		fmt.Println(mobileSpecs)
-		if err != nil {
-			fmt.Println("Error parsing mobile specs:", err)
+		if err := json.Unmarshal(body.Specifications, &mobileSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid mobile specifications format")
+			return
 		}
+		if err := utils.Validate(mobileSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "mouse":
-		err := json.Unmarshal(body.Specifications, &mouseSpecs)
-		fmt.Println(mouseSpecs)
-		if err != nil {
-			fmt.Println("Error parsing mouse specs:", err)
+		if err := json.Unmarshal(body.Specifications, &mouseSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid mouse specifications format")
+			return
 		}
+		if err := utils.Validate(mouseSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "monitor":
-		err := json.Unmarshal(body.Specifications, &monitorSpecs)
-		fmt.Println(monitorSpecs)
-		if err != nil {
-			fmt.Println("Error parsing monitor specs:", err)
+		if err := json.Unmarshal(body.Specifications, &monitorSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid monitor specifications format")
+			return
 		}
+		if err := utils.Validate(monitorSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "hard_disk":
-		err := json.Unmarshal(body.Specifications, &hardDriveSpecs)
-		fmt.Println(hardDriveSpecs)
-		if err != nil {
-			fmt.Println("Error parsing hard disk specs:", err)
+		if err := json.Unmarshal(body.Specifications, &hardDriveSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid hard disk specifications format")
+			return
 		}
+		if err := utils.Validate(hardDriveSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "pen_drive":
-		err := json.Unmarshal(body.Specifications, &penDriveSpecs)
-		fmt.Println(penDriveSpecs)
-		if err != nil {
-			fmt.Println("Error parsing pen drive specs:", err)
+		if err := json.Unmarshal(body.Specifications, &penDriveSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid pen drive specifications format")
+			return
 		}
+		if err := utils.Validate(penDriveSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "sim":
-		err := json.Unmarshal(body.Specifications, &simSpecs)
-		fmt.Println(simSpecs)
-		if err != nil {
-			fmt.Println("Error parsing sim specs:", err)
+		if err := json.Unmarshal(body.Specifications, &simSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid sim specifications format")
+			return
 		}
+		if err := utils.Validate(simSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	case "accessories":
-		err := json.Unmarshal(body.Specifications, &accessoriesSpecs)
-		fmt.Println(accessoriesSpecs)
-		if err != nil {
-			fmt.Println("Error parsing accessories specs:", err)
+		if err := json.Unmarshal(body.Specifications, &accessoriesSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid accessories specifications format")
+			return
 		}
+		if err := utils.Validate(accessoriesSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 	default:
-		fmt.Println("Unknown asset type:", body.AssetType)
+		utils.ResponseError(w, http.StatusBadRequest, "unknown asset type")
+		return
 	}
 
 	assetID, err := dbhelper.IsAssetExists(body.Serial)
+
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check asset exists")
@@ -148,13 +187,12 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		default:
-			fmt.Println("Unknown type:", body.AssetType)
+			return fmt.Errorf("invalid asset type: %s", body.AssetType)
 		}
 
 		return nil
 	})
 	if txErr != nil {
-		fmt.Println(txErr)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create asset")
 		return
 	}
@@ -225,8 +263,8 @@ func GetAssets(w http.ResponseWriter, r *http.Request) {
 	ownedBy := queryParam.Get("ownedBy")
 
 	assetTypeArray := utils.AssetTypeArray(assetType)
-	assetStatusArray := utils.AssetTypeArray(assetStatus)
-	ownedByArray := utils.AssetTypeArray(ownedBy)
+	assetStatusArray := utils.AssetStatusArray(assetStatus)
+	ownedByArray := utils.OwnedByArray(ownedBy)
 
 	var filters models.AssetFilter
 

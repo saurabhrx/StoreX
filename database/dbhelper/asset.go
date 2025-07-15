@@ -179,7 +179,6 @@ WHERE ($1 OR assets.brand ILIKE '%' || $2::TEXT || '%'
     AND (CARDINALITY($3::status_type[])=0 OR assets.status=ANY($3::status_type[]))
     AND (CARDINALITY($4::assets_type[])=0 OR assets.asset_type=ANY($4::assets_type[]))
     AND (CARDINALITY($5::owned_type[])=0 OR assets.owned_by=ANY($5::owned_type[]))
-    AND assets.archived_at IS NULL 
     ORDER BY aa.start_date DESC 
     LIMIT $6 OFFSET $7`
 
@@ -331,7 +330,7 @@ func AssetStats() (models.AssetStatsResponse, error) {
 }
 
 func DeleteAsset(assetID string) error {
-	query := `UPDATE assets SET archived_at=NOW()
+	query := `UPDATE assets SET archived_at=NOW() , status='deleted'
                WHERE id=$1`
 	_, err := database.STOREX.Exec(query, assetID)
 	if err != nil {

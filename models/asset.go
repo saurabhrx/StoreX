@@ -6,72 +6,78 @@ import (
 )
 
 type CreateAssetRequest struct {
-	Brand             string          `json:"brand"`
-	Model             string          `json:"model"`
-	Serial            string          `json:"serial"`
-	AssetType         string          `json:"assetType"`
-	OwnedBy           string          `json:"ownedBy"`
-	WarrantyStartDate string          `json:"warrantyStartDate"`
-	WarrantyEndDate   string          `json:"warrantyEndDate"`
-	PurchasedAt       string          `json:"purchasedAt"`
-	Price             float64         `json:"price"`
+	Brand             string          `json:"brand" validate:"required"`
+	Model             string          `json:"model" validate:"required"`
+	Serial            string          `json:"serial" validate:"required"`
+	AssetType         string          `json:"assetType" validate:"required"`
+	OwnedBy           string          `json:"ownedBy" validate:"required"`
+	WarrantyStartDate string          `json:"warrantyStartDate" validate:"required"`
+	WarrantyEndDate   string          `json:"warrantyEndDate" validate:"required"`
+	PurchasedAt       string          `json:"purchasedAt" validate:"required"`
+	Price             float64         `json:"price" validate:"required,gt=0"`
 	CreatedBy         string          `json:"createdBy"`
-	Specifications    json.RawMessage `json:"specifications"`
+	Specifications    json.RawMessage `json:"specifications" validate:"required"`
 }
+
 type LaptopSpecsRequest struct {
-	AssetID   string `json:"assetID"`
-	Ram       int    `json:"ram"`
-	Storage   int    `json:"storage"`
-	Processor string `json:"processor"`
-	OS        string `json:"os"`
+	AssetID   string `json:"assetID" validate:"required"`
+	Ram       int    `json:"ram" validate:"required,gt=0"`
+	Storage   int    `json:"storage" validate:"required,gt=0"`
+	Processor string `json:"processor" validate:"required"`
+	OS        string `json:"os" validate:"required"`
 }
+
 type MobileSpecsRequest struct {
-	AssetID string `json:"assetID"`
-	Ram     int    `json:"ram"`
-	Storage int    `json:"storage"`
-	OS      string `json:"os"`
-	IMEI1   string `json:"imei_1"`
+	AssetID string `json:"assetID" validate:"required"`
+	Ram     int    `json:"ram" validate:"required,gt=0"`
+	Storage int    `json:"storage" validate:"required,gt=0"`
+	OS      string `json:"os" validate:"required"`
+	IMEI1   string `json:"imei_1" validate:"required,len=15"`
 	IMEI2   string `json:"imei_2"`
 }
+
 type MonitorSpecsRequest struct {
-	AssetID    string  `json:"assetID"`
-	ScreenSize float64 `json:"screenSize"`
-	Resolution string  `json:"resolution"`
+	AssetID    string  `json:"assetID" validate:"required"`
+	ScreenSize float64 `json:"screenSize" validate:"required,gt=0"`
+	Resolution string  `json:"resolution" validate:"required"`
 }
+
 type MouseSpecsRequest struct {
-	AssetID        string `json:"assetID"`
-	ConnectionType string `json:"connectionType"`
-	DPI            int    `json:"dpi"`
+	AssetID        string `json:"assetID" validate:"required"`
+	ConnectionType string `json:"connectionType" validate:"required"`
+	DPI            int    `json:"dpi" validate:"required,gt=0"`
 }
 
 type HardDiskSpecsRequest struct {
-	AssetID   string `json:"assetID"`
-	Type      string `json:"type"`
-	Capacity  int    `json:"capacity"`
-	Interface string `json:"interface"`
-	RPM       int    `json:"rpm"`
+	AssetID   string `json:"assetID" validate:"required"`
+	Type      string `json:"type" validate:"required"`
+	Capacity  int    `json:"capacity" validate:"required,gt=0"`
+	Interface string `json:"interface" validate:"required"`
+	RPM       int    `json:"rpm" validate:"required,min=0"`
 }
 
 type PenDriveSpecsRequest struct {
-	AssetID   string `json:"assetID"`
-	Capacity  int    `json:"capacity"`
-	Interface string `json:"interface"`
+	AssetID   string `json:"assetID" validate:"required"`
+	Capacity  int    `json:"capacity" validate:"required,gt=0"`
+	Interface string `json:"interface" validate:"required"`
 }
+
 type SimSpecsRequest struct {
-	AssetID        string `json:"assetID"`
-	SimNumber      string `json:"simNumber"`
-	Career         string `json:"career"`
-	PlanType       string `json:"planType"`
-	ActivationDate string `json:"activationDate"`
+	AssetID        string `json:"assetID" validate:"required"`
+	SimNumber      string `json:"simNumber" validate:"required"`
+	Career         string `json:"career" validate:"required"`
+	PlanType       string `json:"planType" validate:"required"`
+	ActivationDate string `json:"activationDate" validate:"required"`
 }
+
 type AccessoriesSpecsRequest struct {
-	AssetID string `json:"assetID"`
-	Type    string `json:"type"`
+	AssetID string `json:"assetID" validate:"required"`
+	Type    string `json:"type" validate:"required"`
 }
 
 type AssignAssetRequest struct {
-	EmployeeID string `json:"employeeID"`
-	AssetID    string `json:"assetID"`
+	EmployeeID string `json:"employeeID" validate:"required"`
+	AssetID    string `json:"assetID" validate:"required"`
 }
 
 type AssetResponse struct {
@@ -108,11 +114,11 @@ type LaptopSpecsResponse struct {
 	OS        string `json:"os" db:"os"`
 }
 type MobileSpecsResponse struct {
-	Ram     int    `json:"ram" db:"ram"`
-	Storage int    `json:"storage" db:"storage"`
-	OS      string `json:"os" db:"os"`
-	IMEI1   string `json:"imei1" db:"imei_1"`
-	IMEI2   string `json:"imei2" db:"imei_2"`
+	Ram     int         `json:"ram" db:"ram"`
+	Storage int         `json:"storage" db:"storage"`
+	OS      string      `json:"os" db:"os"`
+	IMEI1   string      `json:"imei1" db:"imei_1"`
+	IMEI2   null.String `json:"imei2" db:"imei_2"`
 }
 type MonitorSpecsResponse struct {
 	ScreenSize float64 `json:"screenSize" db:"screen_size"`

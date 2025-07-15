@@ -8,8 +8,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"strconv"
-	"strings"
 )
 
 var STOREX *sqlx.DB
@@ -67,17 +65,4 @@ func Tx(fn func(tx *sqlx.Tx) error) error {
 	}()
 	err = fn(tx)
 	return err
-}
-
-func SetUpBindVars(stmt, bindVar string, length int) string {
-	bindVar += ","
-	stmt = fmt.Sprintf(stmt, strings.Repeat(bindVar, length))
-	return replaceSQL(strings.TrimSuffix(stmt, ","), "?")
-}
-func replaceSQL(stmt, pattern string) string {
-	count := strings.Count(stmt, "?")
-	for i := 1; i <= count; i++ {
-		stmt = strings.Replace(stmt, pattern, "$"+strconv.Itoa(i), 1)
-	}
-	return stmt
 }

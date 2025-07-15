@@ -28,16 +28,16 @@ func IsValidType(t string) bool {
 type LoginUserRequest struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
+	Email     string `json:"email" validate:"required"`
 }
 
 type CreateUserRequest struct {
-	FirstName    string `json:"firstName"`
+	FirstName    string `json:"firstName" validate:"required"`
 	LastName     string `json:"lastName"`
-	Email        string `json:"email"`
+	Email        string `json:"email" validate:"required"`
 	Phone        string `json:"phone"`
-	EmployeeRole string `json:"employeeRole"`
-	EmployeeType string `json:"employeeType"`
+	EmployeeRole string `json:"employeeRole" validate:"required"`
+	EmployeeType string `json:"employeeType" validate:"required"`
 	CreatedBy    string `json:"createdBy"`
 }
 
@@ -59,6 +59,9 @@ type UserTimeline struct {
 type AssignedAsset struct {
 	AssetID   string      `json:"assetID" db:"id"`
 	Type      string      `json:"type" db:"asset_type"`
+	Brand     string      `json:"brand" db:"brand"`
+	Model     string      `json:"model" db:"model"`
+	SerialNo  string      `json:"serialNo" db:"serial_no"`
 	StartDate string      `json:"startDate" db:"start_date"`
 	EndDate   null.String `json:"endDate" db:"end_date"`
 }
@@ -86,10 +89,19 @@ type UpdateUserDetails struct {
 }
 
 type UserRoleChangeRequest struct {
-	UserID  string `json:"userID"`
-	NewRole string `json:"newRole"`
+	UserID  string `json:"userID" validate:"required"`
+	NewRole string `json:"newRole" validate:"required"`
 }
 type UserTypeChangeRequest struct {
-	UserID  string `json:"userID"`
-	NewType string `json:"newType"`
+	UserID  string `json:"userID" validate:"required"`
+	NewType string `json:"newType" validate:"required"`
+}
+type RefreshToken struct {
+	UserID string `json:"userID"`
+	Token  string `json:"refreshToken"`
+}
+
+type UserNameRole struct {
+	Name     string `json:"name" db:"name"`
+	RoleType string `json:"roleType" db:"role_type"`
 }
