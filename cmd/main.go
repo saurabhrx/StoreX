@@ -21,7 +21,7 @@ func main() {
 	}
 	fmt.Println("database connected")
 
-	srv := routes.SetupTodoRoutes()
+	srv := routes.SetUpStoreXRoutes()
 
 	if srvErr := http.ListenAndServe(":8080", srv); srvErr != nil {
 		logrus.Panicf("failed to connect to server %+v", srvErr)

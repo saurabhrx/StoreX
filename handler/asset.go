@@ -28,12 +28,10 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	var accessoriesSpecs models.AccessoriesSpecsRequest
 
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
-		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
 	if err := utils.Validate(body); err != nil {
-		fmt.Println("Validation error:", err)
 		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -127,7 +125,6 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 	assetID, err := dbhelper.IsAssetExists(body.Serial)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check asset exists")
 		return
 	}
@@ -196,11 +193,11 @@ func CreateAsset(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create asset")
 		return
 	}
-	utils.ResponseJSON(w, http.StatusOK, struct {
+	utils.ResponseJSON(w, http.StatusCreated, struct {
 		Status  int    `json:"status"`
 		Message string `json:"message"`
 	}{
-		Status:  http.StatusOK,
+		Status:  http.StatusCreated,
 		Message: "asset created successfully",
 	})
 
@@ -212,9 +209,12 @@ func AssignAsset(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse body")
 		return
 	}
+	if err := utils.Validate(body); err != nil {
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	emplID, err := dbhelper.IsAssetAssign(body.AssetID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset assigned")
 		return
 	}
@@ -224,7 +224,6 @@ func AssignAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	status, StatusErr := dbhelper.IsAssetAvailable(body.AssetID)
 	if StatusErr != nil && !errors.Is(StatusErr, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset available")
 		return
 	}
@@ -277,7 +276,6 @@ func GetAssets(w http.ResponseWriter, r *http.Request) {
 
 	body, err := dbhelper.GetAllAssets(&filters)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get assets")
 		return
 	}
@@ -305,14 +303,12 @@ func GetAssets(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			fmt.Println("error fetching spec for asset ID:", body[i].ID, err)
 			utils.ResponseError(w, http.StatusInternalServerError, "failed to fetch specifications")
 			return
 		}
 
 		body[i].Specifications = spec
 	}
-	fmt.Println(body)
 
 	utils.ResponseJSON(w, http.StatusOK, body)
 
@@ -321,10 +317,8 @@ func GetAssets(w http.ResponseWriter, r *http.Request) {
 func AssetTimeline(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	assetID := vars["asset-id"]
-	fmt.Println(assetID)
 	body, err := dbhelper.AssetTimeline(assetID)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get asset timeline")
 		return
 	}
@@ -334,8 +328,13 @@ func AssetTimeline(w http.ResponseWriter, r *http.Request) {
 func UnassignAsset(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	assetID := vars["asset-id"]
+	var body models.ReasonOfRetrieve
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse body")
+		return
+	}
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
-		if err := dbhelper.UnassignAsset(tx, assetID); err != nil {
+		if err := dbhelper.UnassignAsset(tx, assetID, body.Reason); err != nil {
 			return err
 		}
 		if err := dbhelper.ChangeAssetStatus(tx, assetID, "available"); err != nil {
@@ -359,7 +358,6 @@ func UnassignAsset(w http.ResponseWriter, r *http.Request) {
 func AssetStats(w http.ResponseWriter, r *http.Request) {
 	body, err := dbhelper.AssetStats()
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get asset counts")
 		return
 	}
@@ -371,7 +369,6 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	assetID := vars["asset-id"]
 	emplID, err := dbhelper.IsAssetAssign(assetID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset assigned")
 		return
 	}
@@ -381,7 +378,6 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	err = dbhelper.DeleteAsset(assetID)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to delete user")
 		return
 	}
@@ -392,6 +388,41 @@ func DeleteAsset(w http.ResponseWriter, r *http.Request) {
 	}{
 		Status:  http.StatusOK,
 		Message: "asset deleted successfully",
+	})
+
+}
+
+func ChangeStatus(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	assetID := vars["asset-id"]
+	var body models.ChangeStatus
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse body")
+		return
+	}
+	if !models.IsValidStatus(body.Status) {
+		utils.ResponseError(w, http.StatusBadRequest, "incorrect status type")
+		return
+	}
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		err := dbhelper.ChangeAssetStatus(tx, assetID, body.Status)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	})
+	if txErr != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to update status")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "asset status updated successfully",
 	})
 
 }

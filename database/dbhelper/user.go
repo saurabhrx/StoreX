@@ -52,9 +52,16 @@ func CreateUserType(db sqlx.Ext, userID, empType string) error {
 	return nil
 }
 func CreateUser(db sqlx.Ext, body *models.CreateUserRequest) (string, error) {
+	args := []interface{}{
+		body.FirstName,
+		body.LastName,
+		body.Email,
+		body.Phone,
+		body.CreatedBy,
+	}
 	query := `INSERT INTO employees(first_name, last_name, email, phone_no,created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id`
 	var userID string
-	err := db.QueryRowx(query, body.FirstName, body.LastName, body.Email, body.Phone, body.CreatedBy).Scan(&userID)
+	err := db.QueryRowx(query, args...).Scan(&userID)
 	if err != nil {
 		return "", err
 	}

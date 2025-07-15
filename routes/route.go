@@ -9,7 +9,7 @@ import (
 	"storeX/utils"
 )
 
-func SetupTodoRoutes() *mux.Router {
+func SetUpStoreXRoutes() *mux.Router {
 	srv := mux.NewRouter()
 
 	srv.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -40,14 +40,17 @@ func SetupTodoRoutes() *mux.Router {
 	assetRoutes.Use(middleware.AuthRole(models.RoleAdmin, models.RoleAssetManager))
 	assetRoutes.HandleFunc("/asset", handler.CreateAsset).Methods("POST")
 	assetRoutes.HandleFunc("/asset/assign", handler.AssignAsset).Methods("POST")
-	assetRoutes.HandleFunc("/asset/{asset-id}/unassign", handler.UnassignAsset).Methods("POST")
+	assetRoutes.HandleFunc("/asset/{asset-id}/unassign", handler.UnassignAsset).Methods("PUT")
 	assetRoutes.HandleFunc("/vendor", handler.CreateVendor).Methods("POST")
-	assetRoutes.HandleFunc("/asset/{asset-id}/service", handler.Service).Methods("POST")
+	assetRoutes.HandleFunc("/asset/{asset-id}/create-service", handler.CreateService).Methods("POST")
+	assetRoutes.HandleFunc("/asset/{asset-id}/update-service", handler.UpdateService).Methods("PUT")
 	assetRoutes.HandleFunc("/asset/{asset-id}/delete", handler.DeleteAsset).Methods("DELETE")
+	assetRoutes.HandleFunc("/asset/{asset-id}/change-status", handler.ChangeStatus).Methods("PUT")
 
 	adminOnly := protected.NewRoute().Subrouter()
 	adminOnly.Use(middleware.AuthRole(models.RoleAdmin))
 	adminOnly.HandleFunc("/user/role/change", handler.RoleChange).Methods("PUT")
 	adminOnly.HandleFunc("/user/type/change", handler.TypeChange).Methods("PUT")
+
 	return srv
 }
