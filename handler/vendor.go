@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"storeX/database/dbhelper"
 	"storeX/models"
@@ -13,6 +14,12 @@ func CreateVendor(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse body")
 		return
 	}
+	if err := utils.Validate(body); err != nil {
+		fmt.Println("Validation error:", err)
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	err := dbhelper.CreateVendor(&body)
 	if err != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create vendor")

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gorilla/mux"
 	"net/http"
 	"storeX/database/dbhelper"
@@ -17,6 +18,12 @@ func Service(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.AssetID = assetID
+	if err := utils.Validate(body); err != nil {
+		fmt.Println("Validation error:", err)
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	err := dbhelper.CreateService(&body)
 	if err != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create service")

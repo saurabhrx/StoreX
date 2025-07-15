@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"errors"
+	"github.com/go-playground/validator"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -34,6 +36,7 @@ func ResponseJSON(w http.ResponseWriter, statusCode int, body interface{}) {
 		logrus.Errorf("failed to send the error %+v", err)
 	}
 }
+
 func ParseBody(body io.Reader, out interface{}) error {
 	err := json.NewDecoder(body).Decode(out)
 	if err != nil {
@@ -75,7 +78,6 @@ func SplitName(email string) (string, string) {
 	lastName := parts[1]
 	return firstName, lastName
 }
-
 func UserRoleArray(empRole string) []string {
 	if empRole == "" {
 		return []string{}
@@ -105,4 +107,17 @@ func OwnedByArray(ownedBy string) []string {
 		return []string{}
 	}
 	return strings.Split(ownedBy, ",")
+}
+func Validate(i interface{}) validator.ValidationErrors {
+	v := validator.New()
+	err := v.Struct(i)
+	if err == nil {
+		return nil
+	}
+	var ve validator.ValidationErrors
+	if errors.As(err, &ve) {
+		return ve
+	}
+	return nil
+
 }

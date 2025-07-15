@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"net/http"
+	"os"
 	"storeX/database"
 	"storeX/database/dbhelper"
 	"storeX/middleware"
@@ -15,15 +17,17 @@ import (
 	"strings"
 )
 
+var jwtSecret = []byte(os.Getenv("SECRET_KEY"))
+
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var body models.LoginUserRequest
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-
-	if body.Email == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter the email")
+	if err := utils.Validate(body.Email); err != nil {
+		fmt.Println("Validation error:", err)
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	isValid := utils.IsValidEmail(body.Email)
@@ -98,24 +102,21 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
+	if err := utils.Validate(body); err != nil {
+		fmt.Println("Validation error:", err)
+		utils.ResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	fmt.Println(body)
-	if body.Email == "" || !utils.IsValidEmail(body.Email) {
+	if !utils.IsValidEmail(body.Email) {
 		utils.ResponseError(w, http.StatusBadRequest, "enter valid email")
 		return
 	}
-	if body.FirstName == "" {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid first name")
-		return
-	}
-	if body.Phone == "" || len(body.Phone) != 10 {
-		utils.ResponseError(w, http.StatusBadRequest, "enter valid number")
-		return
-	}
-	if body.EmployeeRole == "" || !models.IsValidRole(body.EmployeeRole) {
+	if !models.IsValidRole(body.EmployeeRole) {
 		utils.ResponseError(w, http.StatusBadRequest, "enter valid user role")
 		return
 	}
-	if body.EmployeeType == "" || !models.IsValidType(body.EmployeeType) {
+	if !models.IsValidType(body.EmployeeType) {
 		utils.ResponseError(w, http.StatusBadRequest, "enter valid user type")
 		return
 	}
@@ -306,5 +307,54 @@ func TypeChange(w http.ResponseWriter, r *http.Request) {
 	}{
 		Status:  http.StatusOK,
 		Message: "user type changed successfully",
+	})
+}
+
+func Refresh(w http.ResponseWriter, r *http.Request) {
+	var body models.RefreshToken
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		fmt.Println(parseErr)
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
+		return
+	}
+	if body.UserID == "" || body.Token == "" {
+		utils.ResponseError(w, http.StatusUnauthorized, "session expired login again")
+		return
+	}
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(body.Token, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		utils.ResponseError(w, http.StatusUnauthorized, "session expired login again")
+		return
+
+	}
+	res, resErr := dbhelper.GetNameRoleByUserID(body.UserID)
+	if resErr != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "error while getting role")
+		return
+	}
+	accessToken, accessErr := middleware.GenerateAccessToken(body.UserID, res.RoleType, res.Name)
+	if accessErr != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "could not generate access token")
+		return
+	}
+	refreshToken, refreshErr := middleware.GenerateRefreshToken(body.UserID)
+	if refreshErr != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "could not generate refresh token")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status       int    `json:"status"`
+		Message      string `json:"message"`
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+	}{
+		Status:       http.StatusOK,
+		Message:      "user type changed successfully",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	})
 }

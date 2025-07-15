@@ -18,6 +18,7 @@ func SetupTodoRoutes() *mux.Router {
 
 	public := srv.PathPrefix("/api/v1").Subrouter()
 	public.HandleFunc("/user/login", handler.LoginUser).Methods("POST")
+	public.HandleFunc("/refresh", handler.Refresh).Methods("POST")
 
 	protected := public.NewRoute().Subrouter()
 	protected.Use(middleware.AuthMiddleware)
@@ -33,7 +34,7 @@ func SetupTodoRoutes() *mux.Router {
 	employeeRoutes.Use(middleware.AuthRole(models.RoleAdmin, models.RoleEmployeeManager))
 	employeeRoutes.HandleFunc("/user", handler.CreateUser).Methods("POST")
 	employeeRoutes.HandleFunc("/user/{user-id}", handler.UpdateUserDetails).Methods("PUT")
-	employeeRoutes.HandleFunc("/user/{user-id}", handler.DeleteUser).Methods("DELETE")
+	employeeRoutes.HandleFunc("/user/{user-id}/delete", handler.DeleteUser).Methods("DELETE")
 
 	assetRoutes := protected.NewRoute().Subrouter()
 	assetRoutes.Use(middleware.AuthRole(models.RoleAdmin, models.RoleAssetManager))
