@@ -1,7 +1,8 @@
 package handler
 
 import (
-	"fmt"
+	"database/sql"
+	"errors"
 	"net/http"
 	"storeX/database/dbhelper"
 	"storeX/models"
@@ -15,12 +16,19 @@ func CreateVendor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := utils.Validate(body); err != nil {
-		fmt.Println("Validation error:", err)
 		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	err := dbhelper.CreateVendor(&body)
+	vendorID, err := dbhelper.IsVendorAlreadyExists(&body)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check vendor exists")
+		return
+	}
+	if vendorID != "" {
+		utils.ResponseError(w, http.StatusConflict, "vendor already exists")
+		return
+	}
+	err = dbhelper.CreateVendor(&body)
 	if err != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create vendor")
 		return

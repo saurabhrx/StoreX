@@ -5,6 +5,19 @@ import (
 	"github.com/guregu/null"
 )
 
+const (
+	StatusAvailable        = "available"
+	StatusAssigned         = "assigned"
+	StatusWaitingForRepair = "waiting_for_repair"
+	StatusService          = "service"
+	StatusDamaged          = "damaged"
+	StatusDeleted          = "deleted"
+)
+
+func IsValidStatus(s string) bool {
+	return s == StatusAvailable || s == StatusAssigned || s == StatusWaitingForRepair || s == StatusService || s == StatusDamaged || s == StatusDeleted
+}
+
 type CreateAssetRequest struct {
 	Brand             string          `json:"brand" validate:"required"`
 	Model             string          `json:"model" validate:"required"`
@@ -20,7 +33,7 @@ type CreateAssetRequest struct {
 }
 
 type LaptopSpecsRequest struct {
-	AssetID   string `json:"assetID" validate:"required"`
+	AssetID   string `json:"assetID"`
 	Ram       int    `json:"ram" validate:"required,gt=0"`
 	Storage   int    `json:"storage" validate:"required,gt=0"`
 	Processor string `json:"processor" validate:"required"`
@@ -28,7 +41,7 @@ type LaptopSpecsRequest struct {
 }
 
 type MobileSpecsRequest struct {
-	AssetID string `json:"assetID" validate:"required"`
+	AssetID string `json:"assetID"`
 	Ram     int    `json:"ram" validate:"required,gt=0"`
 	Storage int    `json:"storage" validate:"required,gt=0"`
 	OS      string `json:"os" validate:"required"`
@@ -37,19 +50,19 @@ type MobileSpecsRequest struct {
 }
 
 type MonitorSpecsRequest struct {
-	AssetID    string  `json:"assetID" validate:"required"`
+	AssetID    string  `json:"assetID"`
 	ScreenSize float64 `json:"screenSize" validate:"required,gt=0"`
 	Resolution string  `json:"resolution" validate:"required"`
 }
 
 type MouseSpecsRequest struct {
-	AssetID        string `json:"assetID" validate:"required"`
+	AssetID        string `json:"assetID"`
 	ConnectionType string `json:"connectionType" validate:"required"`
 	DPI            int    `json:"dpi" validate:"required,gt=0"`
 }
 
 type HardDiskSpecsRequest struct {
-	AssetID   string `json:"assetID" validate:"required"`
+	AssetID   string `json:"assetID"`
 	Type      string `json:"type" validate:"required"`
 	Capacity  int    `json:"capacity" validate:"required,gt=0"`
 	Interface string `json:"interface" validate:"required"`
@@ -57,13 +70,13 @@ type HardDiskSpecsRequest struct {
 }
 
 type PenDriveSpecsRequest struct {
-	AssetID   string `json:"assetID" validate:"required"`
+	AssetID   string `json:"assetID"`
 	Capacity  int    `json:"capacity" validate:"required,gt=0"`
 	Interface string `json:"interface" validate:"required"`
 }
 
 type SimSpecsRequest struct {
-	AssetID        string `json:"assetID" validate:"required"`
+	AssetID        string `json:"assetID"`
 	SimNumber      string `json:"simNumber" validate:"required"`
 	Career         string `json:"career" validate:"required"`
 	PlanType       string `json:"planType" validate:"required"`
@@ -71,7 +84,7 @@ type SimSpecsRequest struct {
 }
 
 type AccessoriesSpecsRequest struct {
-	AssetID string `json:"assetID" validate:"required"`
+	AssetID string `json:"assetID"`
 	Type    string `json:"type" validate:"required"`
 }
 
@@ -96,15 +109,17 @@ type AssetResponse struct {
 
 type AssetTimeline struct {
 	AssetID  string            `json:"assetId" db:"asset_id"`
-	Employee []AssetAssignedTo `json:"employee" db:"employee"`
+	Assigned []AssetAssignedTo `json:"assigned" db:"assigned"`
 }
 
 type AssetAssignedTo struct {
-	EmpID     string      `json:"empID" db:"id"`
-	Name      string      `json:"name" db:"name"`
-	Email     string      `json:"email" db:"email"`
-	StartDate string      `json:"startDate" db:"start_date"`
-	EndDate   null.String `json:"endDate" db:"end_date"`
+	EmpID      null.String `json:"employeeID" db:"employee_id"`
+	Name       null.String `json:"name" db:"name"`
+	Email      null.String `json:"email" db:"email"`
+	StartDate  string      `json:"startDate" db:"start_date"`
+	EndDate    null.String `json:"endDate" db:"end_date"`
+	Remark     null.String `json:"remark" db:"remark"`
+	RecordType string      `json:"recordType" db:"record_type"`
 }
 
 type LaptopSpecsResponse struct {
@@ -162,4 +177,11 @@ type AssetStatsResponse struct {
 	WaitingForRepair int `json:"waitingForRepair" db:"waiting_for_repair"`
 	Service          int `json:"service" db:"service"`
 	Damaged          int `json:"damaged" db:"damaged"`
+}
+
+type ChangeStatus struct {
+	Status string `json:"status"`
+}
+type ReasonOfRetrieve struct {
+	Reason string `json:"reason"`
 }

@@ -1,7 +1,6 @@
 package dbhelper
 
 import (
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"storeX/database"
@@ -29,7 +28,7 @@ func IsAssetExists(serial string) (string, error) {
 	return assetID, nil
 }
 func IsAssetAssign(assetID string) (string, error) {
-	query := `SELECT employee_id FROM assigned_asset WHERE asset_id=$1 AND (end_date IS NULL OR end_date>NOW())`
+	query := `SELECT employee_id FROM assigned_asset WHERE asset_id=$1 AND end_date IS NULL`
 	var emplID string
 	err := database.STOREX.Get(&emplID, query, assetID)
 	if err != nil {
@@ -42,7 +41,6 @@ func IsAssetAvailable(assetID string) (string, error) {
 	query := `SELECT status FROM assets WHERE id=$1`
 	var status string
 	err := database.STOREX.Get(&status, query, assetID)
-	fmt.Println(status)
 	if err != nil {
 		return "", err
 	}
@@ -192,14 +190,35 @@ WHERE ($1 OR assets.brand ILIKE '%' || $2::TEXT || '%'
 }
 
 func AssetTimeline(assetID string) (models.AssetTimeline, error) {
-	query := `SELECT e.id, CONCAT(first_name,' ',COALESCE(e.last_name, '')) as name,
-               e.email ,aa.start_date,aa.end_date
-               FROM employees e
-               JOIN assigned_asset aa ON aa.employee_id=e.id AND aa.asset_id=$1
-               ORDER BY aa.start_date DESC`
+	query := `SELECT
+		NULL::UUID AS employee_id,
+		NULL::TEXT AS name,
+		NULL::TEXT AS email,
+		s.start_date,
+		s.end_date,
+		s.remark AS remark,
+		'service' AS record_type
+	FROM services s
+	WHERE s.asset_id = $1
+
+	UNION ALL
+
+	SELECT
+		aa.employee_id,
+		CONCAT(e.first_name, ' ', COALESCE(e.last_name, '')) AS name,
+		e.email,
+		aa.start_date,
+		aa.end_date,
+		aa.reason_to_return AS remark,
+		'assigned' AS record_type
+	FROM assigned_asset aa
+	JOIN employees e ON aa.employee_id = e.id
+	WHERE aa.asset_id = $1
+	ORDER BY start_date DESC`
+
 	var body models.AssetTimeline
 	body.AssetID = assetID
-	err := database.STOREX.Select(&body.Employee, query, assetID)
+	err := database.STOREX.Select(&body.Assigned, query, assetID)
 	if err != nil {
 		return models.AssetTimeline{}, err
 	}
@@ -301,13 +320,14 @@ func GetAccessoriesSpec(assetID string) (models.AccessoriesSpecsResponse, error)
 
 }
 
-func UnassignAsset(db sqlx.Ext, assetID string) error {
-	query := `UPDATE assigned_asset SET end_date=NOW() WHERE asset_id=$1`
-	_, err := db.Exec(query, assetID)
+func UnassignAsset(db sqlx.Ext, assetID, reason string) error {
+	query := `UPDATE assigned_asset SET end_date=NOW(), reason_to_return=$2 WHERE asset_id=$1`
+	_, err := db.Exec(query, assetID, reason)
 	if err != nil {
 		return err
 	}
 	return nil
+
 }
 
 func AssetStats() (models.AssetStatsResponse, error) {

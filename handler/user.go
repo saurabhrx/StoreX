@@ -3,7 +3,6 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -26,7 +25,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := utils.Validate(body.Email); err != nil {
-		fmt.Println("Validation error:", err)
 		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -40,7 +38,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	body.LastName = lastName
 	userID, err := dbhelper.IsUserExists(body.Email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check user exists")
 		return
 	}
@@ -103,11 +100,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := utils.Validate(body); err != nil {
-		fmt.Println("Validation error:", err)
 		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println(body)
 	if !utils.IsValidEmail(body.Email) {
 		utils.ResponseError(w, http.StatusBadRequest, "enter valid email")
 		return
@@ -125,7 +120,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	body.CreatedBy = creatorID
 	userID, err := dbhelper.IsUserExists(body.Email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to check user exists")
 		return
 	}
@@ -150,7 +144,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 	if txErr != nil {
-		fmt.Println(txErr)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
@@ -181,7 +174,6 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	filters.IsSearchText = strings.TrimSpace(search) != ""
 	body, err := dbhelper.GetUsers(&filters)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get users")
 		return
 	}
@@ -191,10 +183,8 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 func UserTimeline(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["user-id"]
-	fmt.Println(userID)
 	body, err := dbhelper.UserTimeline(userID)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get user timeline")
 		return
 	}
@@ -209,7 +199,6 @@ func Dashboard(w http.ResponseWriter, r *http.Request) {
 	body.Name = name
 	err := dbhelper.Dashboard(userID, &body)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to get dashboard")
 		return
 	}
@@ -221,14 +210,12 @@ func UpdateUserDetails(w http.ResponseWriter, r *http.Request) {
 	userID := vars["user-id"]
 	var body models.UpdateUserDetails
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
-		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
 	body.UserID = userID
 	err := dbhelper.UpdateUserDetails(&body)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to update user details")
 		return
 	}
@@ -248,7 +235,6 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := dbhelper.DeleteUser(userID)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to delete user")
 		return
 	}
@@ -265,13 +251,11 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 func RoleChange(w http.ResponseWriter, r *http.Request) {
 	var body models.UserRoleChangeRequest
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
-		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
 	err := dbhelper.RoleChange(&body)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to change role")
 		return
 	}
@@ -286,17 +270,13 @@ func RoleChange(w http.ResponseWriter, r *http.Request) {
 }
 
 func TypeChange(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("hello...")
 	var body models.UserTypeChangeRequest
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
-		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-	fmt.Println(body)
 	err := dbhelper.TypeChange(&body)
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to change type")
 		return
 	}
@@ -313,7 +293,6 @@ func TypeChange(w http.ResponseWriter, r *http.Request) {
 func Refresh(w http.ResponseWriter, r *http.Request) {
 	var body models.RefreshToken
 	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
-		fmt.Println(parseErr)
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
