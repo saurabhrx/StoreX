@@ -18,7 +18,7 @@ func Register(db sqlx.Ext, body *models.LoginUserRequest) (string, error) {
 }
 
 func IsUserExists(email string) (string, error) {
-	query := `SELECT id FROM employees WHERE email=$1`
+	query := `SELECT id FROM employees WHERE email=$1 AND archived_at IS NULL`
 	var userID string
 	err := database.STOREX.Get(&userID, query, email)
 	if err != nil {
@@ -35,7 +35,7 @@ func CreateUserRole(db sqlx.Ext, userID, empRole string) error {
 	return nil
 }
 func GetUserRole(userID string) (string, error) {
-	query := `SELECT role FROM employee_role WHERE employee_id=$1`
+	query := `SELECT role FROM employee_role WHERE employee_id=$1 AND archived_at IS NULL`
 	var role string
 	err := database.STOREX.Get(&role, query, userID)
 	if err != nil {
@@ -114,7 +114,7 @@ func GetUsers(filters *models.UserFilter) ([]models.UserResponse, error) {
 func UserTimeline(userID string) (models.UserTimeline, error) {
 	query := `SELECT a.id , a.asset_type,a.brand , a.model , a.serial_no, aa.start_date,aa.end_date 
                FROM employees e
-               JOIN assigned_asset aa ON aa.employee_id=e.id AND e.id=$1
+               JOIN assigned_asset aa ON aa.employee_id=e.id AND e.id=$1 AND e.archived_at IS NULL
                JOIN assets a ON a.id=aa.asset_id ORDER BY aa.start_date DESC`
 	var body models.UserTimeline
 	body.ID = userID
@@ -143,7 +143,7 @@ func UpdateUserDetails(body *models.UpdateUserDetails) error {
 		body.UserID,
 	}
 	query := `UPDATE employees SET first_name=$1 , last_name=$2 , phone_no=$3
-             WHERE id=$4`
+               WHERE id=$4`
 	_, err := database.STOREX.Exec(query, args...)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func GetNameRoleByUserID(userID string) (models.UserNameRole, error) {
 	query := `SELECT CONCAT(e.first_name,' ',e.last_name) as name, et.type as role_type FROM employees e
                 JOIN employee_type et
                     ON e.id = et.employee_id 
-                           AND e.id =$1`
+                           AND e.id =$1 AND e.archived_at IS NULL `
 	var body models.UserNameRole
 	err := database.STOREX.Get(&body, query, userID)
 	if err != nil {
@@ -188,4 +188,13 @@ func GetNameRoleByUserID(userID string) (models.UserNameRole, error) {
 	}
 	return body, nil
 
+}
+func GetAssignedAsset(userID string) (string, error) {
+	query := `SELECT asset_id FROM assigned_asset WHERE employee_id=$1 AND end_date IS NULL`
+	var assetID string
+	err := database.STOREX.Get(&assetID, query, userID)
+	if err != nil {
+		return "", err
+	}
+	return assetID, nil
 }
