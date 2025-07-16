@@ -358,3 +358,88 @@ func DeleteAsset(assetID string) error {
 	}
 	return nil
 }
+
+func UpdateLaptopSpecs(body *models.LaptopSpecsRequest) error {
+	args := []interface{}{
+		body.Ram,
+		body.Storage,
+		body.Processor,
+		body.OS,
+		body.AssetID,
+	}
+	query := `UPDATE laptop_specs SET ram=$1, storage_capacity=$2, processor=$3, os=$4 , updated_at=NOW() WHERE asset_id=$5`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+func UpdateMobileSpecs(body *models.MobileSpecsRequest) error {
+	args := []interface{}{
+		body.Ram,
+		body.Storage,
+		body.OS,
+		body.IMEI1,
+		body.IMEI2,
+		body.AssetID,
+	}
+	query := `UPDATE mobile_specs SET ram=$1, storage_capacity=$2, os=$3, imei_1=$4, imei_2=$5 , updated_at=NOW() WHERE asset_id=$6`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+
+func UpdateMouseSpecs(body *models.MouseSpecsRequest) error {
+	args := []interface{}{
+		body.ConnectionType,
+		body.DPI,
+		body.AssetID,
+	}
+	query := `UPDATE mouse_specs SET connection_type=$1, dpi=$2 , updated_at=NOW() WHERE asset_id=$3`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+
+func UpdateMonitorSpecs(body *models.MonitorSpecsRequest) error {
+	args := []interface{}{
+		body.ScreenSize,
+		body.Resolution,
+		body.AssetID,
+	}
+	query := `UPDATE monitor_specs SET screen_size=$1, resolution=$2 , updated_at=NOW() WHERE asset_id=$3`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+
+func UpdateHardDiskSpecs(body *models.HardDiskSpecsRequest) error {
+	args := []interface{}{
+		body.Type,
+		body.Capacity,
+		body.Interface,
+		body.RPM,
+		body.AssetID,
+	}
+	query := `UPDATE hard_disk_specs SET type=$1, capacity=$2, interface=$3, rpm=$4, updated_at=NOW() WHERE asset_id=$5`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+
+func UpdatePenDriveSpecs(body *models.PenDriveSpecsRequest) error {
+	args := []interface{}{
+		body.Capacity,
+		body.Interface,
+		body.AssetID,
+	}
+	query := `UPDATE pen_drive_specs SET capacity=$1, interface=$2 , updated_at=NOW() WHERE asset_id=$3`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}
+
+func UpdateSimSpecs(body *models.SimSpecsRequest) error {
+	args := []interface{}{
+		body.SimNumber,
+		body.Career,
+		body.PlanType,
+		body.ActivationDate,
+		body.AssetID,
+	}
+	query := `UPDATE sim_specs SET sim_number=$1, career=$2, plan_type=$3, activation_date=$4 , updated_at=NOW() WHERE asset_id=$5`
+	_, err := database.STOREX.Exec(query, args...)
+	return err
+}

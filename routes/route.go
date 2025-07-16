@@ -46,6 +46,7 @@ func SetUpStoreXRoutes() *mux.Router {
 	assetRoutes.HandleFunc("/asset/{asset-id}/update-service", handler.UpdateService).Methods("PUT")
 	assetRoutes.HandleFunc("/asset/{asset-id}/delete", handler.DeleteAsset).Methods("DELETE")
 	assetRoutes.HandleFunc("/asset/{asset-id}/change-status", handler.ChangeStatus).Methods("PUT")
+	assetRoutes.HandleFunc("/asset/{asset-id}/update-asset", handler.UpdateAssetSpecs).Methods("PUT")
 
 	adminOnly := protected.NewRoute().Subrouter()
 	adminOnly.Use(middleware.AuthRole(models.RoleAdmin))

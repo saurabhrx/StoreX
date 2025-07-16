@@ -426,3 +426,125 @@ func ChangeStatus(w http.ResponseWriter, r *http.Request) {
 	})
 
 }
+
+func UpdateAssetSpecs(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	assetID := vars["asset-id"]
+	var body models.UpdateAssetSpecsRequest
+	if parseErr := utils.ParseBody(r.Body, &body); parseErr != nil {
+		utils.ResponseError(w, http.StatusBadRequest, "failed to parse body")
+		return
+	}
+	var err error
+
+	switch body.AssetType {
+	case "laptop":
+		var laptopSpecs models.LaptopSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &laptopSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid laptop specifications format")
+			return
+		}
+		if err = utils.Validate(laptopSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		laptopSpecs.AssetID = assetID
+		err = dbhelper.UpdateLaptopSpecs(&laptopSpecs)
+
+	case "mobile":
+		var mobileSpecs models.MobileSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &mobileSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid mobile specifications format")
+			return
+		}
+		if err = utils.Validate(mobileSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		mobileSpecs.AssetID = assetID
+		err = dbhelper.UpdateMobileSpecs(&mobileSpecs)
+
+	case "monitor":
+		var monitorSpecs models.MonitorSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &monitorSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid monitor specifications format")
+			return
+		}
+		if err = utils.Validate(monitorSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		monitorSpecs.AssetID = assetID
+		err = dbhelper.UpdateMonitorSpecs(&monitorSpecs)
+
+	case "mouse":
+		var mouseSpecs models.MouseSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &mouseSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid mouse specifications format")
+			return
+		}
+		if err = utils.Validate(mouseSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		mouseSpecs.AssetID = assetID
+		err = dbhelper.UpdateMouseSpecs(&mouseSpecs)
+
+	case "hard_disk":
+		var hdSpecs models.HardDiskSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &hdSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid hard disk specifications format")
+			return
+		}
+		if err = utils.Validate(hdSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		hdSpecs.AssetID = assetID
+		err = dbhelper.UpdateHardDiskSpecs(&hdSpecs)
+
+	case "pen_drive":
+		var pdSpecs models.PenDriveSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &pdSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid pen drive specifications format")
+			return
+		}
+		if err = utils.Validate(pdSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		pdSpecs.AssetID = assetID
+		err = dbhelper.UpdatePenDriveSpecs(&pdSpecs)
+
+	case "sim":
+		var simSpecs models.SimSpecsRequest
+		if err = json.Unmarshal(body.Specifications, &simSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, "invalid sim specifications format")
+			return
+		}
+		if err = utils.Validate(simSpecs); err != nil {
+			utils.ResponseError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		simSpecs.AssetID = assetID
+		err = dbhelper.UpdateSimSpecs(&simSpecs)
+
+	default:
+		utils.ResponseError(w, http.StatusBadRequest, "asset type is incorrect")
+		return
+	}
+
+	if err != nil {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to update asset specs")
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, struct {
+		Status  int    `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  http.StatusOK,
+		Message: "asset specs updated successfully",
+	})
+
+}

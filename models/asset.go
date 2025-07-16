@@ -185,3 +185,8 @@ type ChangeStatus struct {
 type ReasonOfRetrieve struct {
 	Reason string `json:"reason"`
 }
+
+type UpdateAssetSpecsRequest struct {
+	AssetType      string          `json:"assetType" validate:"required"`
+	Specifications json.RawMessage `json:"specifications" validate:"required"`
+}
