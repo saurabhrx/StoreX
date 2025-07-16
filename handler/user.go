@@ -233,7 +233,17 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["user-id"]
 
-	err := dbhelper.DeleteUser(userID)
+	assetID, err := dbhelper.GetAssignedAsset(userID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset assigned")
+		return
+	}
+	if assetID != "" {
+		utils.ResponseError(w, http.StatusConflict, "asset is assigned to this user")
+		return
+	}
+
+	err = dbhelper.DeleteUser(userID)
 	if err != nil {
 		utils.ResponseError(w, http.StatusInternalServerError, "failed to delete user")
 		return

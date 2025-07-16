@@ -8,10 +8,20 @@ import (
 )
 
 func CreateAsset(db sqlx.Ext, body *models.CreateAssetRequest) (string, error) {
+	args := []interface{}{
+		body.Brand,
+		body.Model,
+		body.Serial,
+		body.AssetType,
+		body.OwnedBy,
+		body.PurchasedAt,
+		body.Price,
+		body.CreatedBy,
+	}
 	query := `INSERT INTO assets(brand, model, serial_no, asset_type, owned_by, purchased_at, price, created_by) 
                VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`
 	var assetID string
-	err := db.QueryRowx(query, body.Brand, body.Model, body.Serial, body.AssetType, body.OwnedBy, body.PurchasedAt, body.Price, body.CreatedBy).Scan(&assetID)
+	err := db.QueryRowx(query, args...).Scan(&assetID)
 	if err != nil {
 		return "", err
 	}
@@ -19,7 +29,7 @@ func CreateAsset(db sqlx.Ext, body *models.CreateAssetRequest) (string, error) {
 
 }
 func IsAssetExists(serial string) (string, error) {
-	query := `SELECT id FROM assets WHERE serial_no=$1`
+	query := `SELECT id FROM assets WHERE serial_no=$1 AND archived_at IS NULL `
 	var assetID string
 	err := database.STOREX.Get(&assetID, query, serial)
 	if err != nil {
@@ -38,7 +48,7 @@ func IsAssetAssign(assetID string) (string, error) {
 
 }
 func IsAssetAvailable(assetID string) (string, error) {
-	query := `SELECT status FROM assets WHERE id=$1`
+	query := `SELECT status FROM assets WHERE id=$1 AND archived_at IS NULL`
 	var status string
 	err := database.STOREX.Get(&status, query, assetID)
 	if err != nil {
@@ -65,18 +75,33 @@ func ChangeAssetStatus(db sqlx.Ext, assetID, status string) error {
 	return nil
 }
 func CreateLaptopSpecs(db sqlx.Ext, specs *models.LaptopSpecsRequest) error {
+	args := []interface{}{
+		specs.AssetID,
+		specs.Ram,
+		specs.Storage,
+		specs.Processor,
+		specs.OS,
+	}
 	query := `INSERT INTO laptop_specs(asset_id, ram, storage_capacity, processor, os) 
               VALUES($1,$2,$3,$4,$5)`
-	_, err := db.Exec(query, specs.AssetID, specs.Ram, specs.Storage, specs.Processor, specs.OS)
+	_, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 func CreateMobileSpecs(db sqlx.Ext, specs *models.MobileSpecsRequest) error {
+	args := []interface{}{
+		specs.AssetID,
+		specs.Ram,
+		specs.Storage,
+		specs.OS,
+		specs.IMEI1,
+		specs.IMEI2,
+	}
 	query := `INSERT INTO mobile_specs(asset_id, ram, storage_capacity, os, imei_1, imei_2) 
               VALUES($1,$2,$3,$4,$5,$6) `
-	_, err := db.Exec(query, specs.AssetID, specs.Ram, specs.Storage, specs.OS, specs.IMEI1, specs.IMEI2)
+	_, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -101,9 +126,16 @@ func CreateMonitorSpecs(db sqlx.Ext, specs *models.MonitorSpecsRequest) error {
 	return nil
 }
 func CreateHardDiskSpecs(db sqlx.Ext, specs *models.HardDiskSpecsRequest) error {
+	args := []interface{}{
+		specs.AssetID,
+		specs.Type,
+		specs.Capacity,
+		specs.Interface,
+		specs.RPM,
+	}
 	query := `INSERT INTO hard_disk_specs(asset_id, type, capacity, interface, rpm) 
               VALUES($1,$2,$3,$4,$5) `
-	_, err := db.Exec(query, specs.AssetID, specs.Type, specs.Capacity, specs.Interface, specs.RPM)
+	_, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -119,9 +151,16 @@ func CreatePenDriveSpecs(db sqlx.Ext, specs *models.PenDriveSpecsRequest) error 
 	return nil
 }
 func CreateSimSpecs(db sqlx.Ext, specs *models.SimSpecsRequest) error {
+	args := []interface{}{
+		specs.AssetID,
+		specs.SimNumber,
+		specs.Career,
+		specs.PlanType,
+		specs.ActivationDate,
+	}
 	query := `INSERT INTO sim_specs(asset_id, sim_number, career, plan_type, activation_date) 
               VALUES($1,$2,$3,$4,$5) `
-	_, err := db.Exec(query, specs.AssetID, specs.SimNumber, specs.Career, specs.PlanType, specs.ActivationDate)
+	_, err := db.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -227,7 +266,7 @@ func AssetTimeline(assetID string) (models.AssetTimeline, error) {
 
 func GetLaptopSpec(assetID string) (models.LaptopSpecsResponse, error) {
 	query := `SELECT ram,storage_capacity as storage , processor,os 
-              FROM laptop_specs WHERE asset_id=$1`
+              FROM laptop_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.LaptopSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -239,7 +278,7 @@ func GetLaptopSpec(assetID string) (models.LaptopSpecsResponse, error) {
 
 func GetMobileSpec(assetID string) (models.MobileSpecsResponse, error) {
 	query := `SELECT ram,storage_capacity as storage,os,imei_1,imei_2
-              FROM mobile_specs WHERE asset_id=$1`
+              FROM mobile_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.MobileSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -251,7 +290,7 @@ func GetMobileSpec(assetID string) (models.MobileSpecsResponse, error) {
 
 func GetMouseSpec(assetID string) (models.MouseSpecsResponse, error) {
 	query := `SELECT connection_type,dpi
-              FROM mouse_specs WHERE asset_id=$1`
+              FROM mouse_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.MouseSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -263,7 +302,7 @@ func GetMouseSpec(assetID string) (models.MouseSpecsResponse, error) {
 
 func GetMonitorSpec(assetID string) (models.MonitorSpecsResponse, error) {
 	query := `SELECT  screen_size,resolution
-              FROM monitor_specs WHERE asset_id=$1`
+              FROM monitor_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.MonitorSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -275,7 +314,7 @@ func GetMonitorSpec(assetID string) (models.MonitorSpecsResponse, error) {
 
 func GetHardDiskSpec(assetID string) (models.HardDiskSpecsResponse, error) {
 	query := `SELECT  type,capacity,interface,rpm
-              FROM hard_disk_specs WHERE asset_id=$1`
+              FROM hard_disk_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.HardDiskSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -287,7 +326,7 @@ func GetHardDiskSpec(assetID string) (models.HardDiskSpecsResponse, error) {
 
 func GetPenDriveSpec(assetID string) (models.PenDriveSpecsResponse, error) {
 	query := `SELECT capacity,interface
-              FROM pen_drive_specs WHERE asset_id=$1`
+              FROM pen_drive_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.PenDriveSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -299,7 +338,7 @@ func GetPenDriveSpec(assetID string) (models.PenDriveSpecsResponse, error) {
 
 func GetSimSpec(assetID string) (models.SimSpecsResponse, error) {
 	query := `SELECT sim_number,career,plan_type,activation_date
-              FROM sim_specs WHERE asset_id=$1`
+              FROM sim_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.SimSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
@@ -310,7 +349,7 @@ func GetSimSpec(assetID string) (models.SimSpecsResponse, error) {
 }
 func GetAccessoriesSpec(assetID string) (models.AccessoriesSpecsResponse, error) {
 	query := `SELECT type
-              FROM accessories_specs WHERE asset_id=$1`
+              FROM accessories_specs WHERE asset_id=$1 AND archived_at IS NULL`
 	var body models.AccessoriesSpecsResponse
 	err := database.STOREX.Get(&body, query, assetID)
 	if err != nil {
