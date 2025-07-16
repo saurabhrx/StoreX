@@ -24,7 +24,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		utils.ResponseError(w, http.StatusBadRequest, "failed to parse request body")
 		return
 	}
-	if err := utils.Validate(body.Email); err != nil {
+	if err := utils.Validate(body); err != nil {
 		utils.ResponseError(w, http.StatusBadRequest, err.Error())
 		return
 	}

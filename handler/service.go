@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"net/http"
@@ -23,7 +25,15 @@ func CreateService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.AssetID = assetID
-
+	emplID, err := dbhelper.IsAssetAssign(assetID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		utils.ResponseError(w, http.StatusInternalServerError, "failed to check is asset assigned")
+		return
+	}
+	if emplID != "" {
+		utils.ResponseError(w, http.StatusConflict, "asset assigned to someone")
+		return
+	}
 	txErr := database.Tx(func(tx *sqlx.Tx) error {
 		err := dbhelper.CreateService(tx, &body)
 		if err != nil {

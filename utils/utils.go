@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-playground/validator"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
@@ -108,16 +109,20 @@ func OwnedByArray(ownedBy string) []string {
 	}
 	return strings.Split(ownedBy, ",")
 }
-func Validate(i interface{}) validator.ValidationErrors {
-	v := validator.New()
-	err := v.Struct(i)
+
+func Validate(i interface{}) error {
+	var validate = validator.New()
+	err := validate.Struct(i)
 	if err == nil {
 		return nil
 	}
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
-		return ve
+		var sb strings.Builder
+		for _, fe := range ve {
+			sb.WriteString(fmt.Sprintf("Field '%s' failed on '%s' validation; ", fe.Field(), fe.Tag()))
+		}
+		return fmt.Errorf(sb.String())
 	}
-	return nil
-
+	return err
 }
