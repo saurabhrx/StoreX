@@ -6,7 +6,7 @@ import (
 )
 
 func IsVendorAlreadyExists(body *models.CreateVendorRequest) (string, error) {
-	query := `SELECT id FROM vendors WHERE name=$1 AND phone_no=$2`
+	query := `SELECT id FROM vendors WHERE name=$1 AND phone_no=$2 AND archived_at IS NULL`
 	var vendorID string
 	err := database.STOREX.Get(&vendorID, query, body.Name, body.Phone)
 	if err != nil {
